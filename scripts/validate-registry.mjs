@@ -50,6 +50,7 @@ function fail(message) {
 // SRI `integrity` check below, not by this rule. Add an owner allowlist here
 // if provenance, rather than host, ever needs to be enforced too.
 const ALLOWED_SOURCE_URL_PATTERNS = [
+	/^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/releases\/download\/(?!latest\/|main\/)[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+\.tar\.gz$/,
 	/^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/archive\/refs\/tags\/[^/]+\.tar\.gz$/,
 	/^https:\/\/api\.github\.com\/repos\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/tarball\/[A-Za-z0-9._-]+$/,
 ];
@@ -82,7 +83,7 @@ function validateSourceUrlHost(url, relativePath) {
 
 	if (!ALLOWED_SOURCE_URL_PATTERNS.some((pattern) => pattern.test(url))) {
 		fail(
-			`${relativePath} url does not match an allowed source host/shape: ${url}. Expected a github.com release-tag archive or an api.github.com repos tarball URL.`,
+			`${relativePath} url does not match an allowed source host/shape: ${url}. Expected a github.com release-tag archive, immutable release asset, or an api.github.com repos tarball URL.`,
 		);
 	}
 }

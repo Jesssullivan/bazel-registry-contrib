@@ -87,6 +87,23 @@ const cases = [
 		expectPass: true,
 	},
 	{
+		name: 'accepts a versioned public GitHub release asset',
+		url: 'https://github.com/xoxd-ai/bazel-registry/releases/download/public-frontend-v0.1.1/xoxd_theme-0.1.1.tar.gz',
+		expectPass: true,
+	},
+	{
+		name: 'refuses a latest release alias',
+		url: 'https://github.com/xoxd-ai/bazel-registry/releases/download/latest/xoxd_theme-0.1.1.tar.gz',
+		expectPass: false,
+		expectMessage: /does not match an allowed source host\/shape/,
+	},
+	{
+		name: 'refuses an authenticated release API resource',
+		url: 'https://api.github.com/repos/xoxd-ai/bazel-registry/releases/assets/12345',
+		expectPass: false,
+		expectMessage: /does not match an allowed source host\/shape/,
+	},
+	{
 		name: 'refuses registry.npmjs.org',
 		url: 'https://registry.npmjs.org/fixture-module/-/fixture-module-0.1.0.tgz',
 		expectPass: false,
