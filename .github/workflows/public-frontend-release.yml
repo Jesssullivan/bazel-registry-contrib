@@ -1,0 +1,85 @@
+name: Public frontend release
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the audited versioned assets after verification
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: tinyland-nix
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Read immutable release source revisions
+        id: source
+        run: |
+          jq -r '.sources | to_entries[] | "\(.key)=\(.value)"' releases/public-frontend-v0.1.1/plan.json >> "$GITHUB_OUTPUT"
+          jq -r '"registry=" + .registry_commit' releases/public-frontend-v0.1.1/plan.json >> "$GITHUB_OUTPUT"
+      - name: Mint a source-only read token
+        id: source-token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349
+        with:
+          app-id: ${{ secrets.TINYLAND_REGISTRY_APP_ID }}
+          private-key: ${{ secrets.TINYLAND_REGISTRY_APP_KEY }}
+          owner: xoxd-ai
+          repositories: |
+            site.scaffold
+            xoxd-theme
+          permission-contents: read
+      - uses: actions/checkout@v4
+        with:
+          repository: xoxd-ai/site.scaffold
+          ref: ${{ steps.source.outputs.scaffold }}
+          token: ${{ steps.source-token.outputs.token }}
+          persist-credentials: false
+          path: _source/scaffold
+      - uses: actions/checkout@v4
+        with:
+          repository: xoxd-ai/xoxd-theme
+          ref: ${{ steps.source.outputs.theme }}
+          token: ${{ steps.source-token.outputs.token }}
+          persist-credentials: false
+          path: _source/theme
+      - name: Build deterministic narrowed archives
+        run: |
+          python3 _source/scaffold/scripts/export-public-frontend.py --theme-source _source/theme --output public-assets --registry-commit "${{ steps.source.outputs.registry }}"
+          python3 scripts/verify-public-frontend.py --artifacts public-assets --plan releases/public-frontend-v0.1.1/plan.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-frontend-v0.1.1
+          path: public-assets/
+          if-no-files-found: error
+
+  publish:
+    if: inputs.publish
+    needs: prepare
+    runs-on: tinyland-nix
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: public-frontend-v0.1.1
+          path: public-assets
+      - name: Verify the exact release bytes again
+        run: python3 scripts/verify-public-frontend.py --artifacts public-assets --plan releases/public-frontend-v0.1.1/plan.json
+      - name: Publish a new immutable asset set
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view public-frontend-v0.1.1 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo 'Refusing to replace an existing frontend release.' >&2
+            exit 1
+          fi
+          gh release create public-frontend-v0.1.1 public-assets/*.tar.gz public-assets/SHA256SUMS public-assets/manifest.json --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title 'Public shared frontend 0.1.1' --notes-file releases/public-frontend-v0.1.1/NOTES.md

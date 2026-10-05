@@ -1,0 +1,13 @@
+{
+  "homepage": "https://github.com/xoxd-ai/bazel-registry",
+  "maintainers": [
+    {
+      "name": "Jess Sullivan",
+      "email": "jess@sulliwood.org"
+    }
+  ],
+  "versions": [
+    "0.1.0"
+  ],
+  "yanked_versions": {}
+}
