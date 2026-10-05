@@ -25,10 +25,47 @@ permissions:
   contents: read
 
 jobs:
+  # Fork PRs receive only the repository read token. These checks read registry
+  # metadata and public source archives; no private-source App token is needed.
   validate:
     runs-on: tinyland-nix
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: bazel-contrib/setup-bazel@8cb04a772ab4c1eb984e9c1b493a182e96c5e425
+        with:
+          bazelisk-cache: true
+          repository-cache: true
+          cache-save: ${{ github.event_name != 'pull_request' }}
+      - name: Validate static registry contracts
+        run: npm run validate
+      - name: Prove source-host allowlist rejects non-GitHub sources
+        run: npm run test:validate-source-hosts
+      - name: Prove the owner-rename allowance admits one shape and refuses its neighbours
+        run: npm run test:owner-rename-record
+      - name: Build isolated scheduling-kit consumer
+        run: npm run smoke:scheduling-kit-only
+
+  # Authenticate only reviewed main code after a push or an explicit main-ref
+  # dispatch in the authoritative repository. Never project secrets into PRs.
+  trusted-private-consumers:
+    if: >-
+      github.repository == 'xoxd-ai/bazel-registry' &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: validate
+    runs-on: tinyland-nix
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - name: Mint Tinyland registry source token
         id: tinyland-registry-token
         uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349
@@ -47,9 +84,6 @@ jobs:
             tinyland-server-utils
             tinyland-tracing-middleware
           permission-contents: read
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
       - name: Verify private source token scope
         env:
           TINYLAND_REGISTRY_GITHUB_TOKEN: ${{ steps.tinyland-registry-token.outputs.token }}
@@ -86,14 +120,6 @@ jobs:
           bazelisk-cache: true
           repository-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
-      - name: Validate static registry contracts
-        run: npm run validate
-      - name: Prove source-host allowlist rejects non-GitHub sources
-        run: npm run test:validate-source-hosts
-      - name: Prove the owner-rename allowance admits one shape and refuses its neighbours
-        run: npm run test:owner-rename-record
-      - name: Build isolated scheduling-kit consumer
-        run: npm run smoke:scheduling-kit-only
       - name: Build isolated tempo-store consumer
         run: npm run smoke:tempo-store-only
         env:
