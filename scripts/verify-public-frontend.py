@@ -17,6 +17,15 @@ refused = {".git", ".github", ".agents", ".claude", ".gemini", ".codex", "node_m
 names = {"AGENTS.md", "CLAUDE.md", "GEMINI.md", ".env", "credentials.json"}
 patterns = [re.compile(rb"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"), re.compile(rb"\b(?:ghp|gho|ghu|ghs|github_pat)_[A-Za-z0-9_]{20,}\b"), re.compile(rb"\bAKIA[A-Z0-9]{16}\b"), re.compile(rb"(?:Great-Falls-Tool-Bus/meta|meta spec/|docs/agent-notes/|tinyland-nix|registry-credential-helper)")]
 
+expected_assets = {artifact["asset"] for artifact in plan["artifacts"]}
+actual_assets = {path.name for path in args.artifacts.glob("*.tar.gz")}
+assert actual_assets == expected_assets, "Release directory must contain exactly its planned archives"
+manifest = json.loads((args.artifacts / "manifest.json").read_text())
+for field in ["tag", "repository", "registry_commit", "artifacts"]:
+    assert manifest[field] == plan[field], f"Release manifest differs: {field}"
+expected_sums = "".join(f"{artifact['sha256']}  {artifact['asset']}\n" for artifact in plan["artifacts"])
+assert (args.artifacts / "SHA256SUMS").read_text() == expected_sums
+
 for artifact in plan["artifacts"]:
     path = args.artifacts / artifact["asset"]
     digest = hashlib.sha256(path.read_bytes()).digest()
@@ -25,6 +34,7 @@ for artifact in plan["artifacts"]:
     with tarfile.open(path, "r:gz") as archive:
         members = archive.getmembers()
         assert len(members) == artifact["files"]
+        assert len({member.name for member in members}) == len(members), "Duplicate archive member paths"
         assert [member.name for member in members] == sorted(member.name for member in members)
         public_files = set()
         for member in members:
