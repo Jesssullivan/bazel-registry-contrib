@@ -62,3 +62,27 @@ repositories, no artifact transfer or duplicate exporter, audit summary, and
 adjacent conditional verification/publication steps. Every run block passes
 Bash syntax validation. The exact 9d8342 archive verifies and all eight
 negative admission fixtures pass; source tests are unchanged and not repeated.
+
+Pinned publisher follow-up: run 37401186974 passed the same source/export/
+audit/re-verification path but the runner had no gh command. The old release
+view condition suppressed that error and reached create before failing 127.
+https://github.com/xoxd-ai/bazel-registry/actions/runs/37401186974
+
+Publication now acquires only gh from the pinned public-template nixpkgs input
+of the already checked-out scaffold source, with lock updates disabled. The
+qualified command supplies gh 2.91.0 from Nix. No new flake, publisher wrapper,
+runtime credential, or source scope is needed. A successful paginated read of
+the current repository's release tags is required before checking absence;
+query/tool/auth/network failures abort. Existing tags still refuse publication.
+The immutable create command and same-workspace asset verification remain.
+Nix inputs-from and gh API pagination semantics follow official documentation:
+https://nix.dev/manual/nix/2.19/command-ref/new-cli/nix3-shell
+https://cli.github.com/manual/gh_api
+
+Targeted qualification: the actual pinned command resolves gh to its Nix
+store path, preserves the publication environment and successfully performs
+the paginated read-only release query. Four fixtures execute the workflow's
+actual inline shell with a mock gh: tool failure, API failure and existing tag
+all prevent create; absent tag supplies only the expected exact asset arguments.
+The fixture never performs real API writes. Main/permission/source-token/
+same-workspace boundaries, Bash syntax and frozen-archive verification pass.

@@ -66,6 +66,7 @@ jobs:
           python3 _source/scaffold/scripts/export-public-frontend.py --theme-source _source/theme --output public-assets --registry-commit "${{ steps.source.outputs.registry }}" "${export_args[@]}"
           python3 scripts/verify-public-frontend.py --artifacts public-assets --plan releases/${{ inputs.release_tag }}/plan.json
           python3 scripts/test-verify-public-frontend.py --artifacts public-assets --plan releases/${{ inputs.release_tag }}/plan.json
+          python3 scripts/test-release-publication-admission.py
       - name: Summarize the audited asset set
         env:
           PUBLISH_REQUESTED: ${{ inputs.publish }}
@@ -87,9 +88,17 @@ jobs:
         if: inputs.publish
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
-          if gh release view "${{ inputs.release_tag }}" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+          nix shell --no-update-lock-file --inputs-from ./_source/scaffold/public/template nixpkgs#gh --command bash -euo pipefail <<'PUBLISH'
+          gh --version
+          if ! release_tags="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/releases?per_page=100" --jq '.[].tag_name')"; then
+            echo 'Unable to verify existing releases; refusing publication.' >&2
+            exit 1
+          fi
+          if printf '%s\n' "$release_tags" | grep -Fx -- "$RELEASE_TAG" >/dev/null; then
             echo 'Refusing to replace an existing frontend release.' >&2
             exit 1
           fi
-          gh release create "${{ inputs.release_tag }}" public-assets/*.tar.gz public-assets/SHA256SUMS public-assets/manifest.json --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "${{ inputs.release_tag }}" --notes-file releases/${{ inputs.release_tag }}/NOTES.md
+          gh release create "$RELEASE_TAG" public-assets/*.tar.gz public-assets/SHA256SUMS public-assets/manifest.json --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "$RELEASE_TAG" --notes-file "releases/${RELEASE_TAG}/NOTES.md"
+          PUBLISH
