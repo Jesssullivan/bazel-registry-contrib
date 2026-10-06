@@ -38,3 +38,27 @@ static-preview browser proofs were completed in the source contribution.
 LICENSE, NOTICE, fonts OFL and gitleaks checks pass; no agent/private-doc/CI/
 credential content is exported. Source repositories stay private. Root owns
 registry PR review, merge and release publication after this signed handoff.
+
+Workflow follow-up: run 37400341493 on registry 311272c successfully minted
+the source-only App token, read both sources, exported deterministic bytes and
+passed exact verification/admission fixtures. Its upload-artifact step then
+failed because Actions storage quota was full; publication was skipped.
+https://github.com/xoxd-ai/bazel-registry/actions/runs/37400341493
+
+The existing dispatch lane now builds, audits and optionally publishes in one
+canonical-main job/workspace. No upload/download transfer or second build is
+needed. With publish=false, it emits only the audited manifest/checksum summary
+and logs. Root permissions remain contents:read; the selected release job has
+explicit contents:write for the existing conditional gh release step. The
+source App scope stays read-only on the same two repositories. Publish=true
+re-verifies those same files immediately before refusing an existing tag or
+creating the new immutable release. No other stream's artifacts are deleted,
+no token scope or manual publication wrapper is added, and frozen archive
+bytes remain unchanged.
+
+Follow-up checks pass: parsed workflow has one job, dispatch-only/canonical
+main boundary, root read/job write permissions, exactly two read-only source
+repositories, no artifact transfer or duplicate exporter, audit summary, and
+adjacent conditional verification/publication steps. Every run block passes
+Bash syntax validation. The exact 9d8342 archive verifies and all eight
+negative admission fixtures pass; source tests are unchanged and not repeated.

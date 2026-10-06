@@ -19,9 +19,11 @@ permissions:
   contents: read
 
 jobs:
-  prepare:
+  release:
     if: github.repository == 'xoxd-ai/bazel-registry' && github.ref == 'refs/heads/main'
     runs-on: tinyland-nix
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -64,29 +66,25 @@ jobs:
           python3 _source/scaffold/scripts/export-public-frontend.py --theme-source _source/theme --output public-assets --registry-commit "${{ steps.source.outputs.registry }}" "${export_args[@]}"
           python3 scripts/verify-public-frontend.py --artifacts public-assets --plan releases/${{ inputs.release_tag }}/plan.json
           python3 scripts/test-verify-public-frontend.py --artifacts public-assets --plan releases/${{ inputs.release_tag }}/plan.json
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ${{ inputs.release_tag }}
-          path: public-assets/
-          if-no-files-found: error
-
-  publish:
-    if: inputs.publish && github.repository == 'xoxd-ai/bazel-registry' && github.ref == 'refs/heads/main'
-    needs: prepare
-    runs-on: tinyland-nix
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - uses: actions/download-artifact@v4
-        with:
-          name: ${{ inputs.release_tag }}
-          path: public-assets
+      - name: Summarize the audited asset set
+        env:
+          PUBLISH_REQUESTED: ${{ inputs.publish }}
+        run: |
+          {
+            echo '### Verified public frontend assets'
+            echo
+            echo "Publication requested: $PUBLISH_REQUESTED"
+            echo
+            echo '```json'
+            cat public-assets/manifest.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat public-assets/SHA256SUMS
       - name: Verify the exact release bytes again
+        if: inputs.publish
         run: python3 scripts/verify-public-frontend.py --artifacts public-assets --plan releases/${{ inputs.release_tag }}/plan.json
       - name: Publish a new immutable asset set
+        if: inputs.publish
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
