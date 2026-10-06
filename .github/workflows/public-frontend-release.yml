@@ -3,6 +3,13 @@ name: Public frontend release
 on:
   workflow_dispatch:
     inputs:
+      release_tag:
+        description: Immutable release plan to prepare
+        type: choice
+        options:
+          - site-scaffold-public-v0.1.1
+          - public-frontend-v0.1.1
+        default: site-scaffold-public-v0.1.1
       publish:
         description: Publish the audited versioned assets after verification
         type: boolean
@@ -13,6 +20,7 @@ permissions:
 
 jobs:
   prepare:
+    if: github.repository == 'xoxd-ai/bazel-registry' && github.ref == 'refs/heads/main'
     runs-on: tinyland-nix
     steps:
       - uses: actions/checkout@v4
@@ -21,8 +29,9 @@ jobs:
       - name: Read immutable release source revisions
         id: source
         run: |
-          jq -r '.sources | to_entries[] | "\(.key)=\(.value)"' releases/public-frontend-v0.1.1/plan.json >> "$GITHUB_OUTPUT"
-          jq -r '"registry=" + .registry_commit' releases/public-frontend-v0.1.1/plan.json >> "$GITHUB_OUTPUT"
+          jq -r '.sources | to_entries[] | "\(.key)=\(.value)"' releases/${{ inputs.release_tag }}/plan.json >> "$GITHUB_OUTPUT"
+          jq -r '"registry=" + .registry_commit' releases/${{ inputs.release_tag }}/plan.json >> "$GITHUB_OUTPUT"
+          jq -r '"template_only=" + ((.template_only // false) | tostring)' releases/${{ inputs.release_tag }}/plan.json >> "$GITHUB_OUTPUT"
       - name: Mint a source-only read token
         id: source-token
         uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349
@@ -50,16 +59,19 @@ jobs:
           path: _source/theme
       - name: Build deterministic narrowed archives
         run: |
-          python3 _source/scaffold/scripts/export-public-frontend.py --theme-source _source/theme --output public-assets --registry-commit "${{ steps.source.outputs.registry }}"
-          python3 scripts/verify-public-frontend.py --artifacts public-assets --plan releases/public-frontend-v0.1.1/plan.json
+          export_args=()
+          if [ "${{ steps.source.outputs.template_only }}" = true ]; then export_args+=(--template-only); fi
+          python3 _source/scaffold/scripts/export-public-frontend.py --theme-source _source/theme --output public-assets --registry-commit "${{ steps.source.outputs.registry }}" "${export_args[@]}"
+          python3 scripts/verify-public-frontend.py --artifacts public-assets --plan releases/${{ inputs.release_tag }}/plan.json
+          python3 scripts/test-verify-public-frontend.py --artifacts public-assets --plan releases/${{ inputs.release_tag }}/plan.json
       - uses: actions/upload-artifact@v4
         with:
-          name: public-frontend-v0.1.1
+          name: ${{ inputs.release_tag }}
           path: public-assets/
           if-no-files-found: error
 
   publish:
-    if: inputs.publish
+    if: inputs.publish && github.repository == 'xoxd-ai/bazel-registry' && github.ref == 'refs/heads/main'
     needs: prepare
     runs-on: tinyland-nix
     permissions:
@@ -70,16 +82,16 @@ jobs:
           persist-credentials: false
       - uses: actions/download-artifact@v4
         with:
-          name: public-frontend-v0.1.1
+          name: ${{ inputs.release_tag }}
           path: public-assets
       - name: Verify the exact release bytes again
-        run: python3 scripts/verify-public-frontend.py --artifacts public-assets --plan releases/public-frontend-v0.1.1/plan.json
+        run: python3 scripts/verify-public-frontend.py --artifacts public-assets --plan releases/${{ inputs.release_tag }}/plan.json
       - name: Publish a new immutable asset set
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view public-frontend-v0.1.1 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+          if gh release view "${{ inputs.release_tag }}" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo 'Refusing to replace an existing frontend release.' >&2
             exit 1
           fi
-          gh release create public-frontend-v0.1.1 public-assets/*.tar.gz public-assets/SHA256SUMS public-assets/manifest.json --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title 'Public shared frontend 0.1.1' --notes-file releases/public-frontend-v0.1.1/NOTES.md
+          gh release create "${{ inputs.release_tag }}" public-assets/*.tar.gz public-assets/SHA256SUMS public-assets/manifest.json --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "${{ inputs.release_tag }}" --notes-file releases/${{ inputs.release_tag }}/NOTES.md
