@@ -1,5 +1,5 @@
 {
-  "homepage": "https://github.com/tinyland-inc/tinyland-publishing-hooks",
+  "homepage": "https://github.com/xoxd-ai/tinyland-publishing-hooks",
   "maintainers": [
     {
       "name": "tinyland",
@@ -9,5 +9,6 @@
   "versions": [
     "0.2.2"
   ],
-  "yanked_versions": {}
+  "yanked_versions": {},
+  "deprecated": "Retired 2026-10-14 (RU2/RU7). Merged into tummycrypt_tinyland_content as the ./publishing-hooks subpath export (@tummycrypt/tinyland-content/publishing-hooks, same API), shipped in tummycrypt_tinyland_content 0.9.0 and later. Source repo xoxd-ai/tinyland-publishing-hooks is archived. 0.2.2 stays resolvable; nothing is yanked."
 }
