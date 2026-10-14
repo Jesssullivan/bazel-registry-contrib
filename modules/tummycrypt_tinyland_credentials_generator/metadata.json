@@ -11,5 +11,5 @@
     "0.2.3"
   ],
   "yanked_versions": {},
-  "deprecated": "Retired 2026-10-09 (RU2/RU7). No replacement module: no live app or registry module depends on it (its only user was the tinyland.dev admin invite direct-create path, which the Mothership integration branch replaces with the invitation-service flow). Source repo xoxd-ai/tinyland-credentials-generator is archived. 0.2.2 and 0.2.3 stay resolvable; nothing is yanked."
+  "deprecated": "Retired 2026-10-09 (RU2/RU7). No replacement module. Remaining consumer: xoxd-ai/tinyland.dev main still bazel_deps 0.2.3 and imports generateCredentialsCard in the admin invite direct-create path; the Mothership decomposition (xoxd-ai/tinyland.dev#953) removes that dep, import and packages/ copy in favour of the invitation-service flow. No other app or registry module depends on it. Do not add new dependents. Source repo xoxd-ai/tinyland-credentials-generator is archived. 0.2.2 and 0.2.3 stay resolvable; nothing is yanked."
 }
