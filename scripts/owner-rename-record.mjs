@@ -9,13 +9,25 @@
 // url, strip_prefix and integrity are re-recorded. The validate workflow's
 // isolated consumer builds prove the re-recorded integrity against GitHub.
 //
-// What is allowed, all of it required:
+// What is allowed, all of it required, in one of two shapes.
+//
+// Shape A, an api.github.com tarball (the owner is in its top directory, so
+// the rename changed its bytes):
 //   - the file is a source.json whose key set is unchanged;
 //   - every key other than url, strip_prefix and integrity is byte-identical;
 //   - url changes only by substituting one recorded owner pair in the owner
-//     segment of an api.github.com tarball URL or a github.com archive URL;
+//     segment of the api.github.com tarball URL;
 //   - strip_prefix changes only by the same substitution at its start;
 //   - integrity is a well-formed sha256 SRI value and differs from before.
+//
+// Shape B, a github.com tag or commit archive (its top directory is
+// <repo>-<ref> and carries no owner, so the rename did not change its bytes;
+// the shipped URL only keeps resolving through GitHub's rename redirect):
+//   - the file is a source.json whose key set is unchanged;
+//   - every key other than url is byte-identical, integrity and strip_prefix
+//     included, so the recorded integrity itself proves the same byte stream;
+//   - url changes only by substituting one recorded owner pair in the owner
+//     segment of the github.com archive URL.
 //
 // Usage (exit 0 = allowed, 1 = not a rename record, 2 = usage or read error):
 //   node scripts/owner-rename-record.mjs <base-commit> <path/to/source.json>
@@ -66,11 +78,18 @@ export function judgeRenameRecord(before, after, renames) {
 	for (const key of RECORDABLE) {
 		if (typeof before[key] !== 'string' || typeof after[key] !== 'string') return refuse(`"${key}" must be a string before and after`);
 	}
+	if (after.url === before.url) return refuse('url did not change');
+	if (isGithubArchive(before.url) && after.integrity === before.integrity) {
+		// Shape B: same bytes, so only the url may follow the rename.
+		if (after.strip_prefix !== before.strip_prefix) return refuse('a github.com archive keeps its bytes, so strip_prefix may not change');
+		const urlMatches = renames.filter((rename) => isUsableRename(rename) && rewriteOwner(before.url, rename.from, rename.to) === after.url);
+		if (urlMatches.length !== 1) return refuse('url is not one recorded owner substitution');
+		return { allowed: true, reason: `follows the recorded owner rename ${urlMatches[0].from} to ${urlMatches[0].to} (same archive bytes)` };
+	}
 	if (!SRI_SHA256.test(after.integrity)) return refuse('re-recorded integrity is not a sha256 SRI value');
 	if (after.integrity === before.integrity) return refuse('integrity did not change, so there is nothing to re-record');
-	if (after.url === before.url) return refuse('url did not change');
 	const matches = renames.filter((rename) => {
-		if (!isPlainObject(rename) || !OWNER.test(rename.from ?? '') || !OWNER.test(rename.to ?? '') || rename.from === rename.to) return false;
+		if (!isUsableRename(rename)) return false;
 		const expectedUrl = rewriteOwner(before.url, rename.from, rename.to);
 		if (expectedUrl === null || expectedUrl !== after.url) return false;
 		const prefixOwner = rename.from + '-';
@@ -79,6 +98,20 @@ export function judgeRenameRecord(before, after, renames) {
 	});
 	if (matches.length !== 1) return refuse('url and strip_prefix are not one recorded owner substitution');
 	return { allowed: true, reason: `follows the recorded owner rename ${matches[0].from} to ${matches[0].to}` };
+}
+
+function isUsableRename(rename) {
+	return isPlainObject(rename) && OWNER.test(rename.from ?? '') && OWNER.test(rename.to ?? '') && rename.from !== rename.to;
+}
+
+function isGithubArchive(url) {
+	let parsed;
+	try {
+		parsed = new URL(url);
+	} catch {
+		return false;
+	}
+	return parsed.protocol === 'https:' && parsed.hostname === 'github.com' && parsed.pathname.split('/')[3] === 'archive';
 }
 
 function refuse(reason) {
