@@ -6,7 +6,7 @@ here — see "Deferred: Step B" below.
 ## Scope
 
 This is the estate-wide adoption spec for converging on one proven Bazel
-version and pinning `tinyland-inc/bazel-registry` by exact commit SHA rather
+version and pinning `xoxd-ai/bazel-registry` by exact commit SHA rather
 than a mutable ref. It codifies conventions already proven green in
 `greatfallstoolbus.org` and a sibling spoke; it does not introduce new
 mechanism.
@@ -54,7 +54,7 @@ dependent smoke scripts (`npm run smoke:resolve`,
 
 Bzlmod module resolution walks a fixed two-registry chain, in this order:
 
-1. `tinyland-inc/bazel-registry` (in-house modules resolve first)
+1. `xoxd-ai/bazel-registry` (in-house modules resolve first)
 2. `bcr.bazel.build` (Bazel Central Registry, fallback)
 
 This mirrors `elders.tinyland.dev` and is already the convention in the
@@ -64,7 +64,7 @@ in-house one.
 
 ## 3. Exact-SHA registry pin convention
 
-The first registry entry pins `tinyland-inc/bazel-registry` to an immutable
+The first registry entry pins `xoxd-ai/bazel-registry` to an immutable
 commit SHA, not the mutable `main` ref, so module metadata (`MODULE.bazel` +
 `source.json`) cannot silently change underneath a consumer. This is already
 live in a sibling spoke; `greatfallstoolbus.org/.bazelrc` converges to it
@@ -74,12 +74,12 @@ The refresh one-liner is already documented in that spoke's `.bazelrc` and
 is quoted here verbatim, not re-authored:
 
 ```
-sed -i '' "s|bazel-registry/[0-9a-f]\{40\}|bazel-registry/$(gh api repos/tinyland-inc/bazel-registry/commits/main --jq .sha)|" .bazelrc
+sed -i '' "s|bazel-registry/[0-9a-f]\{40\}|bazel-registry/$(gh api repos/xoxd-ai/bazel-registry/commits/main --jq .sha)|" .bazelrc
 ```
 
 Convention for consumers:
 
-- Pin format: `common --registry=https://raw.githubusercontent.com/tinyland-inc/bazel-registry/<40-char-sha>` (no trailing slash after the SHA).
+- Pin format: `common --registry=https://raw.githubusercontent.com/xoxd-ai/bazel-registry/<40-char-sha>` (no trailing slash after the SHA).
 - Bump the SHA deliberately, in its own commit, alongside a `MODULE.bazel.lock`
   refresh — never silently as a side effect of an unrelated change.
 - The commit message for a re-pin should name the registry commit(s) that
