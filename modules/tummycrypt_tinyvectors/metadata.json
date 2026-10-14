@@ -1,5 +1,5 @@
 {
-  "homepage": "https://github.com/tinyland-inc/tinyvectors",
+  "homepage": "https://github.com/xoxd-ai/tinyvectors",
   "maintainers": [
     {
       "name": "tinyland",
@@ -17,7 +17,8 @@
     "0.3.4",
     "0.3.5",
     "0.3.6",
-    "0.3.7"
+    "0.3.7",
+    "1.0.0"
   ],
   "yanked_versions": {}
 }

@@ -1,5 +1,5 @@
 {
-  "url": "https://github.com/tinyland-inc/tinyland-threat-detection/archive/refs/tags/v0.2.2.tar.gz",
+  "url": "https://github.com/xoxd-ai/tinyland-threat-detection/archive/refs/tags/v0.2.2.tar.gz",
   "strip_prefix": "tinyland-threat-detection-0.2.2",
   "integrity": "sha256-oAQRZPjsRcidqCflk1rbmqZ3DBIwuu/+7VFWCKaVa9c=",
   "patches": {

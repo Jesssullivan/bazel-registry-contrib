@@ -1,5 +1,5 @@
 {
-  "homepage": "https://github.com/tinyland-inc/tinyland-types",
+  "homepage": "https://github.com/xoxd-ai/tinyland-types",
   "maintainers": [
     {
       "name": "tinyland",
@@ -10,5 +10,6 @@
     "0.2.2",
     "0.2.3"
   ],
-  "yanked_versions": {}
+  "yanked_versions": {},
+  "deprecated": "Retired 2026-10-14 (RU2/RU7). No live consumer: tinyland.dev held an unused bazel_dep, and tummycrypt_tinyland_stores dropped it in 0.3.0. Use tummycrypt_tinyland_content_types (1.0.0 and later) for content, event and visibility types. Source repo xoxd-ai/tinyland-types is archived. 0.2.2 and 0.2.3 stay resolvable; nothing is yanked."
 }
