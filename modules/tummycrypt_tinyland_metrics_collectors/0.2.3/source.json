@@ -1,5 +1,5 @@
 {
-  "url": "https://github.com/tinyland-inc/tinyland-metrics-collectors/archive/refs/tags/v0.2.2.tar.gz",
+  "url": "https://github.com/xoxd-ai/tinyland-metrics-collectors/archive/refs/tags/v0.2.2.tar.gz",
   "strip_prefix": "tinyland-metrics-collectors-0.2.2",
   "integrity": "sha256-ZyCEnhxFbGutDre6W8WkMcXWNbsemk5uK8XOd+iyL+k=",
   "patches": {
