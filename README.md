@@ -1,4 +1,4 @@
-# tinyland-inc/bazel-registry
+# xoxd-ai/bazel-registry
 
 An [in-house Bazel module registry](https://bazel.build/external/registry) for
 Tinyland-authored Bzlmod modules (`tummycrypt_*`, `rules_tectonic`,
@@ -50,14 +50,14 @@ then `bcr.bazel.build` (Bazel Central Registry) as fallback. See
 ## How spokes pin this registry
 
 Spokes pin this registry to an immutable commit SHA in their own `.bazelrc`
-(`common --registry=https://raw.githubusercontent.com/tinyland-inc/bazel-registry/<40-char-sha>`),
+(`common --registry=https://raw.githubusercontent.com/xoxd-ai/bazel-registry/<40-char-sha>`),
 not the mutable `main` ref, so module metadata cannot change silently
 underneath them. A sibling spoke's documented refresh one-liner (quoted verbatim
 in [`docs/bazel-adoption-v0.md` §3](./docs/bazel-adoption-v0.md#3-exact-sha-registry-pin-convention))
 is the canonical way to re-pin after this registry advances:
 
 ```
-sed -i '' "s|bazel-registry/[0-9a-f]\{40\}|bazel-registry/$(gh api repos/tinyland-inc/bazel-registry/commits/main --jq .sha)|" .bazelrc
+sed -i '' "s|bazel-registry/[0-9a-f]\{40\}|bazel-registry/$(gh api repos/xoxd-ai/bazel-registry/commits/main --jq .sha)|" .bazelrc
 ```
 
 A SHA bump must land alongside a `MODULE.bazel.lock` refresh in the same
