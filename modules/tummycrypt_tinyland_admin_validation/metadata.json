@@ -10,5 +10,6 @@
     "0.2.2",
     "0.2.3"
   ],
-  "yanked_versions": {}
+  "yanked_versions": {},
+  "deprecated": "Retired 2026-10-14 (RU2/RU7). No live app or registry module depends on it; its only other copy was the tinyland.dev packages/ workspace. For ADMIN_ROLES/AdminRole/AdminPermission use tummycrypt_tinyland_auth; admin user request schemas belong in the owning app. Source repo xoxd-ai/tinyland-admin-validation is archived. 0.2.2 and 0.2.3 stay resolvable; nothing is yanked."
 }
