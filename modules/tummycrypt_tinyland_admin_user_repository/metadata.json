@@ -10,5 +10,6 @@
     "0.2.2",
     "0.2.3"
   ],
-  "yanked_versions": {}
+  "yanked_versions": {},
+  "deprecated": "Retired 2026-10-15 (RV15/RV19). Merged into tummycrypt_tinyland_auth as the ./admin-user-repository subpath export (@tummycrypt/tinyland-auth/admin-user-repository), shipped in tummycrypt_tinyland_auth 1.1.0 and later. Source repo xoxd-ai/tinyland-admin-user-repository is archived. 0.2.2 and 0.2.3 stay resolvable; nothing is yanked."
 }
