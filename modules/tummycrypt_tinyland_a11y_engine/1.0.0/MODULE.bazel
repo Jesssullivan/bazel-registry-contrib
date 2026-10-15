@@ -1,0 +1,48 @@
+module(
+    name = "tummycrypt_tinyland_a11y_engine",
+    version = "1.0.0",
+    compatibility_level = 1,
+)
+
+bazel_dep(name = "aspect_bazel_lib", version = "2.22.5")
+bazel_dep(name = "aspect_rules_js", version = "2.9.1")
+bazel_dep(name = "aspect_rules_ts", version = "3.10.1")
+bazel_dep(name = "bazel_skylib", version = "1.8.2")
+bazel_dep(name = "platforms", version = "1.0.0")
+bazel_dep(name = "rules_nodejs", version = "6.7.3")
+
+# In-house dependency, resolved through the Bazel module graph from
+# xoxd-ai/bazel-registry (RU6). It is never an npm dependency.
+bazel_dep(name = "tummycrypt_tinyland_color_utils", version = "1.0.0")
+
+# 22.22.0 is the newest 22.x that rules_nodejs 6.7.3 knows; Vite 8 needs
+# >= 22.12 (matches xoxd-ai/site.scaffold).
+node = use_extension("@rules_nodejs//nodejs:extensions.bzl", "node")
+node.toolchain(node_version = "22.22.0")
+
+pnpm = use_extension("@aspect_rules_js//npm:extensions.bzl", "pnpm")
+pnpm.pnpm(
+    name = "pnpm",
+    pnpm_version = "10.13.1",
+)
+use_repo(pnpm, "pnpm")
+
+# Build-time hub only. The `pkg` target links none of these packages into
+# consumers: svelte and axe-core are optional peers that the consuming app's
+# own lock provides (see BUILD.bazel).
+npm = use_extension("@aspect_rules_js//npm:extensions.bzl", "npm")
+npm.npm_translate_lock(
+    name = "tummycrypt_tinyland_a11y_engine_npm",
+    data = [
+        "//:package.json",
+        "//:pnpm-workspace.yaml",
+    ],
+    pnpm_lock = "//:pnpm-lock.yaml",
+)
+use_repo(npm, "tummycrypt_tinyland_a11y_engine_npm")
+
+# TypeScript 7.0.2 (native compiler) per RU1/RU13. rules_ts >= 3.9.0 knows the
+# native package integrities; ts_project must set transpiler = "tsc".
+typescript = use_extension("@aspect_rules_ts//ts:extensions.bzl", "typescript")
+typescript.deps(version = "7.0.2")
+use_repo(typescript, "npm_typescript")
