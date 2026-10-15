@@ -10,5 +10,6 @@
     "0.2.2",
     "0.2.3"
   ],
-  "yanked_versions": {}
+  "yanked_versions": {},
+  "deprecated": "Retired 2026-10-15 (RU2/RU7). Merged into tummycrypt_tinyland_content as the ./video-thumbnails subpath export (@tummycrypt/tinyland-content/video-thumbnails, same API), shipped in tummycrypt_tinyland_content 1.2.0 and later. Source repo xoxd-ai/tinyland-video-thumbnails is archived. 0.2.2 and 0.2.3 stay resolvable; nothing is yanked."
 }
