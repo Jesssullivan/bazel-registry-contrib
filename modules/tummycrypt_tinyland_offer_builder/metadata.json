@@ -9,5 +9,6 @@
   "versions": [
     "0.2.0"
   ],
-  "yanked_versions": {}
+  "yanked_versions": {},
+  "deprecated": "Retired 2026-10-14 (RU2/RU7). Merged into tummycrypt_tinyland_activitypub as the ./offer-builder subpath export (@tummycrypt/tinyland-activitypub/offer-builder, same API, GNU Taler keyed as taler), shipped in tummycrypt_tinyland_activitypub 1.0.0 and later. Source repo xoxd-ai/tinyland-offer-builder is archived. 0.2.0 stays resolvable; nothing is yanked."
 }
