@@ -1,0 +1,94 @@
+"""
+scheduling-kit - Bazel Module Configuration
+
+Backend-agnostic scheduling library with pluggable adapters, payment processors,
+and Svelte UI components. The JavaScript artifact keeps the
+@tummycrypt/scheduling-kit import identity for Bazel consumers.
+
+Bazel is the only distribution path (RU6): consumers take this module from
+xoxd-ai/bazel-registry and link the package; nothing is published to npm.
+
+  bazel_dep(name = "tummycrypt_scheduling_kit", version = "1.0.0")
+  npm_link_package(name = "node_modules/@tummycrypt/scheduling-kit", src = "@tummycrypt_scheduling_kit//:pkg")
+
+Build targets:
+  bazel build //:pkg                  # JavaScript package artifact (svelte-package dist/)
+  bazel test //:test                  # Unit tests (vitest)
+  bazel test //:test-component        # Rendered Svelte component tests (jsdom)
+  bazel test //:typecheck             # svelte-check --tsgo (TypeScript 7.0.2) + seeded-error canary
+"""
+
+module(
+    name = "tummycrypt_scheduling_kit",
+    version = "1.0.0",
+    compatibility_level = 1,
+)
+
+# =============================================================================
+# Core Bazel dependencies
+# =============================================================================
+
+bazel_dep(name = "bazel_skylib", version = "1.8.2")
+bazel_dep(name = "platforms", version = "1.0.0")
+bazel_dep(name = "aspect_bazel_lib", version = "2.22.5")
+
+# =============================================================================
+# Inter-module dependencies (xoxd-ai/bazel-registry)
+# =============================================================================
+# Availability substrate (TIN-1996): the ./recurrence and ./caldav subpaths load
+# tinyland-calendar (RRULE recurrence) and tinyland-caldav-client (external
+# calendar busy overlay) lazily at runtime. Both come only from the Bzlmod graph
+# (RU6): BUILD.bazel links each module's //:pkg into node_modules for the
+# package build, the type check and the tests. package.json and the pnpm lock
+# carry no in-house specifiers.
+
+bazel_dep(name = "tummycrypt_tinyland_calendar", version = "1.0.0")
+bazel_dep(name = "tummycrypt_tinyland_caldav_client", version = "1.0.1")
+
+# =============================================================================
+# JavaScript toolchain (Aspect Build)
+# =============================================================================
+
+bazel_dep(name = "rules_nodejs", version = "6.7.3")
+bazel_dep(name = "aspect_rules_js", version = "2.9.1")
+
+# =============================================================================
+# Node.js toolchain
+# =============================================================================
+
+node = use_extension("@rules_nodejs//nodejs:extensions.bzl", "node", dev_dependency = True)
+node.toolchain(node_version = "22.22.0")
+
+# =============================================================================
+# pnpm toolchain
+# =============================================================================
+
+pnpm = use_extension("@aspect_rules_js//npm:extensions.bzl", "pnpm", dev_dependency = True)
+pnpm.pnpm(
+    name = "pnpm",
+    pnpm_version = "10.13.1",
+)
+use_repo(pnpm, "pnpm")
+
+# =============================================================================
+# npm dependency resolution from pnpm-lock.yaml
+# =============================================================================
+# Not dev: a consumer's build of //:pkg runs svelte-package from this lock.
+# RU13: npm_translate_lock applies the pnpm `patchedDependencies` recorded in
+# pnpm-lock.yaml, and the RU13b companion rewrite from .pnpmfile.cjs is recorded
+# there too; the hook and patch files are declared inputs.
+
+npm = use_extension("@aspect_rules_js//npm:extensions.bzl", "npm")
+
+npm.npm_translate_lock(
+    name = "tummycrypt_scheduling_kit_npm",
+    data = [
+        "//:.pnpmfile.cjs",
+        "//:package.json",
+        "//:patches/svelte-check@4.7.6.patch",
+    ],
+    npmrc = "//:.npmrc",
+    pnpm_lock = "//:pnpm-lock.yaml",
+)
+
+use_repo(npm, "tummycrypt_scheduling_kit_npm")
