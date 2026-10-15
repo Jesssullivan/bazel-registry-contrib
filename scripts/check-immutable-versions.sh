@@ -13,9 +13,11 @@
 # version; publish a new one.
 #
 # One allowance, and only one: a shipped source.json may be re-recorded to
-# follow a GitHub owner rename listed in registry-owner-renames.json, because
-# api.github.com tarball archives embed the owner in their top directory and a
-# rename changes the bytes a shipped URL serves. scripts/owner-rename-record.mjs
+# follow a GitHub owner rename listed in registry-owner-renames.json. For
+# api.github.com tarballs the owner is in the archive's top directory, so url,
+# strip_prefix and integrity are re-recorded together. For github.com tag
+# archives the bytes do not change, so only url follows the rename and the
+# unchanged integrity proves the same byte stream. scripts/owner-rename-record.mjs
 # judges each such file against the base commit; anything it refuses is a
 # violation like any other.
 #
