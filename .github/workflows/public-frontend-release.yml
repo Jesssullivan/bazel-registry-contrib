@@ -9,6 +9,7 @@ on:
         options:
           - site-scaffold-public-v0.1.1
           - public-frontend-v0.1.1
+          - xoxd-spectrogram-public-v1.0.1
         default: site-scaffold-public-v0.1.1
       publish:
         description: Publish the audited versioned assets after verification
@@ -34,6 +35,7 @@ jobs:
           jq -r '.sources | to_entries[] | "\(.key)=\(.value)"' releases/${{ inputs.release_tag }}/plan.json >> "$GITHUB_OUTPUT"
           jq -r '"registry=" + .registry_commit' releases/${{ inputs.release_tag }}/plan.json >> "$GITHUB_OUTPUT"
           jq -r '"template_only=" + ((.template_only // false) | tostring)' releases/${{ inputs.release_tag }}/plan.json >> "$GITHUB_OUTPUT"
+          jq -r '"exporter=" + (.exporter // "scaffold")' releases/${{ inputs.release_tag }}/plan.json >> "$GITHUB_OUTPUT"
       - name: Mint a source-only read token
         id: source-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
@@ -44,6 +46,7 @@ jobs:
           repositories: |
             site.scaffold
             xoxd-theme
+            xoxd-spectrogram
           permission-contents: read
       - uses: actions/checkout@v4
         with:
@@ -52,18 +55,38 @@ jobs:
           token: ${{ steps.source-token.outputs.token }}
           persist-credentials: false
           path: _source/scaffold
-      - uses: actions/checkout@v4
+      - if: steps.source.outputs.theme != ''
+        uses: actions/checkout@v4
         with:
           repository: xoxd-ai/xoxd-theme
           ref: ${{ steps.source.outputs.theme }}
           token: ${{ steps.source-token.outputs.token }}
           persist-credentials: false
           path: _source/theme
+      - if: steps.source.outputs.spectrogram != ''
+        uses: actions/checkout@v4
+        with:
+          repository: xoxd-ai/xoxd-spectrogram
+          ref: ${{ steps.source.outputs.spectrogram }}
+          token: ${{ steps.source-token.outputs.token }}
+          persist-credentials: false
+          path: _source/spectrogram
       - name: Build deterministic narrowed archives
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
-          export_args=()
-          if [ "${{ steps.source.outputs.template_only }}" = true ]; then export_args+=(--template-only); fi
-          python3 _source/scaffold/scripts/export-public-frontend.py --theme-source _source/theme --output public-assets --registry-commit "${{ steps.source.outputs.registry }}" "${export_args[@]}"
+          case "${{ steps.source.outputs.exporter }}" in
+            scaffold)
+              export_args=()
+              if [ "${{ steps.source.outputs.template_only }}" = true ]; then export_args+=(--template-only); fi
+              python3 _source/scaffold/scripts/export-public-frontend.py --theme-source _source/theme --output public-assets --registry-commit "${{ steps.source.outputs.registry }}" "${export_args[@]}"
+              ;;
+            spectrogram)
+              # The module's own exporter reads the committed tree at the pinned revision.
+              python3 _source/spectrogram/scripts/export-public.py --source _source/spectrogram --ref "${{ steps.source.outputs.spectrogram }}" --output public-assets --registry-commit "${{ steps.source.outputs.registry }}" --tag "$RELEASE_TAG"
+              ;;
+            *) echo 'Unknown release exporter; refusing.' >&2; exit 1 ;;
+          esac
           python3 scripts/verify-public-frontend.py --artifacts public-assets --plan releases/${{ inputs.release_tag }}/plan.json
           python3 scripts/test-verify-public-frontend.py --artifacts public-assets --plan releases/${{ inputs.release_tag }}/plan.json
           python3 scripts/test-release-publication-admission.py

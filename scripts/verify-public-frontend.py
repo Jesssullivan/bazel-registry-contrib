@@ -51,6 +51,9 @@ for artifact in plan["artifacts"]:
         assert {"LICENSE", "NOTICE", "MODULE.bazel", "BUILD.bazel"} <= public_files
         if artifact["module"] == "xoxd_theme":
             assert {"fonts/OFL.txt", "fonts/FiraCodeNerdFontMono-Regular.woff2", "fonts/FiraCodeNerdFontMono-Bold.woff2"} <= public_files
+        if artifact["module"] == "xoxd_spectrogram":
+            assert {"package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".npmrc", ".pnpmfile.cjs"} <= public_files
+            assert not {".bazelrc", "MODULE.bazel.lock", "scripts/bazel/github-credential-helper.py"} & public_files, "Root-only or credential file in module archive"
         if artifact["module"] == "site-scaffold-public":
             assert {"flake.nix", "flake.lock", "Justfile", "pnpm-lock.yaml", "static/fonts/OFL.txt"} <= public_files
     print(f"Verified {path.name}: {artifact['files']} audited files, sha256 {digest.hex()}")
