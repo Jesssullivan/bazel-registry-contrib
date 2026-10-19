@@ -11,6 +11,7 @@ import tarfile
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--artifacts", type=Path, required=True)
 parser.add_argument("--plan", type=Path, required=True)
+parser.add_argument("--registry", type=Path, default=Path(__file__).resolve().parent.parent, help="Registry root whose modules/ entries must match the plan (default: this checkout)")
 args = parser.parse_args()
 plan = json.loads(args.plan.read_text())
 refused = {".git", ".github", ".agents", ".claude", ".gemini", ".codex", "node_modules", "docs", "config", "plugins", "tofu"}
@@ -37,6 +38,7 @@ for artifact in plan["artifacts"]:
         assert len({member.name for member in members}) == len(members), "Duplicate archive member paths"
         assert [member.name for member in members] == sorted(member.name for member in members)
         public_files = set()
+        archive_module_bazel = None
         for member in members:
             assert member.isfile() and not member.issym() and not member.islnk(), member.name
             relative = Path(member.name).relative_to(artifact["strip_prefix"])
@@ -48,6 +50,8 @@ for artifact in plan["artifacts"]:
             if relative.suffix != ".woff2":
                 assert not any(pattern.search(data) for pattern in patterns), f"Refused content in {relative}"
             public_files.add(relative.as_posix())
+            if relative.as_posix() == "MODULE.bazel":
+                archive_module_bazel = data
         assert {"LICENSE", "NOTICE", "MODULE.bazel", "BUILD.bazel"} <= public_files
         if artifact["module"] == "xoxd_theme":
             assert {"fonts/OFL.txt", "fonts/FiraCodeNerdFontMono-Regular.woff2", "fonts/FiraCodeNerdFontMono-Bold.woff2"} <= public_files
@@ -56,4 +60,17 @@ for artifact in plan["artifacts"]:
             assert not {".bazelrc", "MODULE.bazel.lock", "scripts/bazel/github-credential-helper.py"} & public_files, "Root-only or credential file in module archive"
         if artifact["module"] == "site-scaffold-public":
             assert {"flake.nix", "flake.lock", "Justfile", "pnpm-lock.yaml", "static/fonts/OFL.txt"} <= public_files
+    # A registered module's entry must resolve to exactly these bytes, or the
+    # published asset would fail its own source.json or ship a MODULE.bazel that
+    # differs from the one Bazel resolves. Template-only assets have no entry.
+    module_root = args.registry / "modules" / artifact["module"]
+    if module_root.is_dir():
+        entry = module_root / artifact["version"]
+        assert entry.is_dir(), f"Registry has no entry for {artifact['module']} {artifact['version']}"
+        source = json.loads((entry / "source.json").read_text())
+        expected_url = f"https://github.com/{plan['repository']}/releases/download/{plan['tag']}/{artifact['asset']}"
+        assert source.get("url") == expected_url, f"Registry source.json differs: url ({source.get('url')})"
+        assert source.get("integrity") == artifact["integrity"], "Registry source.json differs: integrity"
+        assert source.get("strip_prefix") == artifact["strip_prefix"], "Registry source.json differs: strip_prefix"
+        assert (entry / "MODULE.bazel").read_bytes() == archive_module_bazel, "Registry MODULE.bazel differs from the archive"
     print(f"Verified {path.name}: {artifact['files']} audited files, sha256 {digest.hex()}")
