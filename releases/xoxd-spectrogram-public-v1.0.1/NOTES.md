@@ -14,6 +14,6 @@ is required. Its in-house dependencies (xoxd_theme 0.1.1, tinyland-composables
 manifest.json record the exact archive bytes.
 
 Validated: two deterministic exports and a shallow re-export at the pinned
-revision are byte-identical; verify-public-frontend and its eight negative
-admission fixtures pass; @xoxd_spectrogram//:pkg builds and :test and :typecheck
+revision are byte-identical; verify-public-frontend and its negative admission
+fixtures pass; @xoxd_spectrogram//:pkg builds and :test and :typecheck
 pass from the archive as an external module with no credential helper.

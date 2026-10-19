@@ -6,7 +6,12 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import sys
 import tarfile
+
+# Every admission check below is an assert; `python -O` or PYTHONOPTIMIZE strips them.
+if sys.flags.optimize:
+    sys.exit("Refusing to verify with assertions stripped (python -O or PYTHONOPTIMIZE).")
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--artifacts", type=Path, required=True)
@@ -21,9 +26,16 @@ patterns = [re.compile(rb"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"), r
 expected_assets = {artifact["asset"] for artifact in plan["artifacts"]}
 actual_assets = {path.name for path in args.artifacts.glob("*.tar.gz")}
 assert actual_assets == expected_assets, "Release directory must contain exactly its planned archives"
-manifest = json.loads((args.artifacts / "manifest.json").read_text())
-for field in ["tag", "repository", "registry_commit", "artifacts"]:
-    assert manifest[field] == plan[field], f"Release manifest differs: {field}"
+# manifest.json is published as-is, so admit only the exact bytes the plan implies:
+# no extra keys, no content beyond the four planned fields.
+manifest_fields = ["tag", "repository", "registry_commit", "artifacts"]
+manifest_bytes = (args.artifacts / "manifest.json").read_bytes()
+manifest = json.loads(manifest_bytes)
+assert isinstance(manifest, dict), "Release manifest differs: not an object"
+for field in manifest_fields:
+    assert manifest.get(field) == plan[field], f"Release manifest differs: {field}"
+planned_manifest = json.dumps({field: plan[field] for field in manifest_fields}, indent=2) + "\n"
+assert manifest_bytes == planned_manifest.encode(), "Release manifest differs: extra keys or non-canonical bytes"
 expected_sums = "".join(f"{artifact['sha256']}  {artifact['asset']}\n" for artifact in plan["artifacts"])
 assert (args.artifacts / "SHA256SUMS").read_text() == expected_sums
 

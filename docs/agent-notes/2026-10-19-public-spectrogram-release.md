@@ -45,8 +45,8 @@ xoxd-spectrogram (tinyland-registry-reader is installed on all org repos).
 ## Local proof (sting, diagnostic)
 
 Two exports and a shallow-clone re-export through the workflow's own build step
-are byte-identical. verify-public-frontend, its eight negative fixtures, the
-four publication-admission fixtures, validate-registry (249 entries), source-host
+are byte-identical. verify-public-frontend, its negative fixtures (12 for this
+plan after review round 2), the publication-admission fixtures (6), validate-registry (249 entries), source-host
 and owner-rename fixtures, and the immutability gate pass. From the archive as an
 external module (archive_override with the plan integrity, this registry and BCR,
 no credential helper, no GH token), `@xoxd_spectrogram//:pkg` builds and `:test`,
@@ -77,6 +77,31 @@ no credential helper, no GH token), `@xoxd_spectrogram//:pkg` builds and `:test`
 - The spectrogram exporter refuses a `--ref` other than HEAD or a 40-hex SHA
   and no longer uses `assert` for its guards.
 
+## Review fixes, round 2 (2026-10-19)
+
+- verify-public-frontend.py admits manifest.json only as the exact bytes the
+  plan implies (`json.dumps` of the four planned fields, indent 2, trailing
+  newline), because the release publishes that file unverified otherwise. The
+  published site-scaffold-public-v0.1.1 and public-frontend-v0.1.1 manifests
+  are already in this form and still verify. New fixture: `manifest-extra-key`.
+- The publish step also refuses when `refs/tags/<release_tag>` already exists
+  (exact match over `git/matching-refs`), since `gh release create` reuses an
+  existing tag and ignores `--target`. Two new admission fixtures cover a
+  pre-existing tag and a failed tag lookup.
+- The verifier and both fixture scripts exit when `sys.flags.optimize` is set,
+  so `python -O` or PYTHONOPTIMIZE cannot strip their asserts (the Justfile
+  recipes run `python3` without `-I`).
+- `actions/checkout`, `upload-artifact` and `download-artifact` are pinned to
+  the commit SHAs their v4 tags pointed at on 2026-10-19 (v4.4.0, v4.6.2,
+  v4.3.0), like `create-github-app-token`. Dependabot keeps SHA pins current.
+- NOTES.md (the public release body) no longer states a fixture count.
+- Audit: `test/fixtures/server-tensor-train-speech-4000-12000.json` is a
+  log-mel tensor of the deck's `train-speech` fixture recording (source_sha256
+  e0de95b2…). The deck's semantic-audit ledger (row 62) and
+  `scripts/pdf/tensor_figures.py` record that recording as a generated 300 Hz
+  sine (`PreparedAnnotationsTest#wav(300)`), not speech. It has no third-party
+  data source, so NOTICE needs no entry and the bytes stay unchanged.
+
 ## Follow-ups (not merge blockers)
 
 - xoxd-spectrogram has no remote CI, Justfile or AGENTS.md (this predates the
@@ -90,9 +115,20 @@ no credential helper, no GH token), `@xoxd_spectrogram//:pkg` builds and `:test`
 
 ## Remaining gates
 
-1. xoxd-spectrogram PR #3 merges with a regular merge (not squash or rebase),
-   so 8674ecd stays on main.
-2. This PR merges with a regular merge, so registry_commit 1faea3a stays on main.
+Order matters, and nothing enforces it: both repos allow merge, squash and
+rebase, and xoxd-spectrogram has no branch protection or ruleset.
+
+1. Merge xoxd-spectrogram PR #3 first, with "Create a merge commit". Confirm
+   `git merge-base --is-ancestor 8674ecd origin/main` in xoxd-spectrogram.
+2. Then merge this PR with "Create a merge commit", so registry_commit 1faea3a
+   stays on main.
+
+If either lands squashed or rebased, do not touch `modules/xoxd_spectrogram/1.0.1`
+(frozen once on main). The archive bytes depend only on the tree, and
+`releases/` is outside the immutability gate. Recover by merging the original
+branch into main so the pin becomes an ancestor, or by a follow-up PR that
+re-pins plan.json (`sources.spectrogram` or `registry_commit`) to the landed
+commit and re-verifies the unchanged sha256.
 3. The operator dispatches `Public frontend release` on main with
    `release_tag=xoxd-spectrogram-public-v1.0.1` and `publish=true` (AGENTS.md:
    release publication needs an explicit operator go). The workflow refuses an

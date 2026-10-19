@@ -13,6 +13,9 @@ import sys
 import tarfile
 import tempfile
 
+if sys.flags.optimize:
+    sys.exit("Refusing to run admission fixtures with assertions stripped (python -O or PYTHONOPTIMIZE).")
+
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--artifacts", type=Path, required=True)
 parser.add_argument("--plan", type=Path, required=True)
@@ -25,7 +28,8 @@ registry = Path(__file__).resolve().parent.parent
 def write_metadata(directory, plan):
     (directory / "plan.json").write_text(json.dumps(plan))
     manifest = {field: plan[field] for field in ["tag", "repository", "registry_commit", "artifacts"]}
-    (directory / "manifest.json").write_text(json.dumps(manifest))
+    # The canonical form the exporters write and the verifier admits byte-for-byte.
+    (directory / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     (directory / "SHA256SUMS").write_text("".join(f"{item['sha256']}  {item['asset']}\n" for item in plan["artifacts"]))
 
 
@@ -78,7 +82,7 @@ def drift_registry(directory, plan, case):
     return directory / "registry"
 
 
-cases = ["altered-bytes", "extra-archive", "manifest-mismatch", "agent-file", "traversal", "absolute", "symlink", "duplicate"]
+cases = ["altered-bytes", "extra-archive", "manifest-mismatch", "manifest-extra-key", "agent-file", "traversal", "absolute", "symlink", "duplicate"]
 # Registry-entry drift applies only when the plan's first asset is a registered module.
 if (registry / "modules" / original["artifacts"][0]["module"]).is_dir():
     cases += ["registry-integrity", "registry-url", "registry-module-bazel"]
@@ -93,20 +97,25 @@ for case in cases:
                 target.write(b"altered")
         elif case == "extra-archive":
             shutil.copyfile(directory / plan["artifacts"][0]["asset"], directory / "unplanned.tar.gz")
-        elif case != "manifest-mismatch" and not case.startswith("registry-"):
+        elif not case.startswith(("manifest-", "registry-")):
             rewrite_archive(directory, plan, case)
         registry_args = ["--registry", str(drift_registry(directory, plan, case))] if case.startswith("registry-") else []
         write_metadata(directory, plan)
         if case == "manifest-mismatch":
             manifest = json.loads((directory / "manifest.json").read_text())
             manifest["tag"] = "unplanned-release"
-            (directory / "manifest.json").write_text(json.dumps(manifest))
+            (directory / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+        if case == "manifest-extra-key":
+            manifest = json.loads((directory / "manifest.json").read_text())
+            manifest["notes"] = "unverified content riding along with the published manifest"
+            (directory / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
         result = subprocess.run([sys.executable, str(verifier), "--artifacts", str(directory), "--plan", str(directory / "plan.json"), *registry_args], capture_output=True, text=True)
         assert result.returncode != 0, f"Unexpectedly admitted {case}"
         expected = {
             "altered-bytes": "Archive checksum differs",
             "extra-archive": "exactly its planned archives",
             "manifest-mismatch": "Release manifest differs: tag",
+            "manifest-extra-key": "Release manifest differs: extra keys",
             "duplicate": "Duplicate archive member paths",
             "registry-integrity": "Registry source.json differs: integrity",
             "registry-url": "Registry source.json differs: url",

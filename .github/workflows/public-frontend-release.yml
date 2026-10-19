@@ -29,7 +29,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
       - name: Read and validate immutable release source revisions
@@ -63,7 +63,7 @@ jobs:
             xoxd-spectrogram
           permission-contents: read
       # fetch-depth 0 brings origin/main, so the pins' ancestry can be checked.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           repository: xoxd-ai/site.scaffold
           ref: ${{ steps.source.outputs.scaffold }}
@@ -72,7 +72,7 @@ jobs:
           fetch-depth: 0
           path: _source/scaffold
       - if: steps.source.outputs.theme != ''
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           repository: xoxd-ai/xoxd-theme
           ref: ${{ steps.source.outputs.theme }}
@@ -81,7 +81,7 @@ jobs:
           fetch-depth: 0
           path: _source/theme
       - if: steps.source.outputs.spectrogram != ''
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           repository: xoxd-ai/xoxd-spectrogram
           ref: ${{ steps.source.outputs.spectrogram }}
@@ -133,7 +133,7 @@ jobs:
               ;;
             *) echo 'Unknown release exporter; refusing.' >&2; exit 1 ;;
           esac
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: public-assets
           path: public-assets/
@@ -150,7 +150,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
           fetch-depth: 0
@@ -169,7 +169,7 @@ jobs:
           else
             echo "::warning::registry_commit $registry_commit is not an ancestor of $GITHUB_SHA"
           fi
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: public-assets
           path: public-assets
@@ -222,7 +222,7 @@ jobs:
       # Only the template's flake inputs are read (for gh's nixpkgs pin); no
       # scaffold code runs in this job.
       - if: inputs.publish
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           repository: xoxd-ai/site.scaffold
           ref: ${{ steps.toolchain.outputs.scaffold }}
@@ -243,6 +243,16 @@ jobs:
           fi
           if printf '%s\n' "$release_tags" | grep -Fx -- "$RELEASE_TAG" >/dev/null; then
             echo 'Refusing to replace an existing frontend release.' >&2
+            exit 1
+          fi
+          # gh release create reuses an existing tag and ignores --target, so a tag
+          # pushed ahead of the dispatch would pin the release to an arbitrary commit.
+          if ! tag_refs="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/git/matching-refs/tags/${RELEASE_TAG}" --jq '.[].ref')"; then
+            echo 'Unable to verify existing tags; refusing publication.' >&2
+            exit 1
+          fi
+          if printf '%s\n' "$tag_refs" | grep -Fx -- "refs/tags/${RELEASE_TAG}" >/dev/null; then
+            echo 'Refusing to publish onto a tag that already exists.' >&2
             exit 1
           fi
           gh release create "$RELEASE_TAG" public-assets/*.tar.gz public-assets/SHA256SUMS public-assets/manifest.json --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "$RELEASE_TAG" --notes-file "releases/${RELEASE_TAG}/NOTES.md"
