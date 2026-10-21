@@ -1,0 +1,21 @@
+{
+  "tag": "xoxd-spectrogram-public-v1.1.0",
+  "repository": "xoxd-ai/bazel-registry",
+  "registry_commit": "eca67314ffd1daf38f157c62a3db8b05eb7f2a0a",
+  "artifacts": [
+    {
+      "module": "xoxd_spectrogram",
+      "version": "1.1.0",
+      "asset": "xoxd_spectrogram-1.1.0.tar.gz",
+      "strip_prefix": "xoxd_spectrogram-1.1.0",
+      "sha256": "850013b723e5334c5bf6b7a16e52c56e733d70a72b69f7a64f6566c1021a9320",
+      "integrity": "sha256-hQATtyPlM0xb9rehblLFbnM9cKcrafemT2VmwQIakyA=",
+      "files": 100
+    }
+  ],
+  "exporter": "spectrogram",
+  "sources": {
+    "scaffold": "3e46b9ede560cddbbfa91eb0157f09b89319c648",
+    "spectrogram": "6bd187efd756b104c1bcf1041ee99b49366bcd4c"
+  }
+}

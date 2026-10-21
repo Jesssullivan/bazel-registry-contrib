@@ -10,6 +10,7 @@ on:
           - site-scaffold-public-v0.1.1
           - public-frontend-v0.1.1
           - xoxd-spectrogram-public-v1.0.1
+          - xoxd-spectrogram-public-v1.1.0
         default: site-scaffold-public-v0.1.1
       publish:
         description: Publish the audited versioned assets after verification
