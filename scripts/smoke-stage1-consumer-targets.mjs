@@ -207,13 +207,31 @@ process.stdout.write(JSON.stringify({
 	];
 }
 
+// Startup options for every Bazel call in the temporary workspace. The idle
+// limit bounds the server if this process dies before the shutdown in the
+// finally block runs (TIN-5770 R470).
+const bazelStartupArgs = ['--ignore_all_rc_files', '--max_idle_secs=120'];
+
+// Find the launcher on PATH without running it. `bazel version` starts a
+// server in the registry checkout (TIN-5770 R472).
+function isOnPath(command) {
+	for (const dir of (process.env.PATH ?? '').split(path.delimiter)) {
+		if (!dir) {
+			continue;
+		}
+		try {
+			fs.accessSync(path.join(dir, command), fs.constants.X_OK);
+			return true;
+		} catch {
+			// Not in this PATH entry.
+		}
+	}
+	return false;
+}
+
 function resolveBazelCommand() {
 	for (const command of ['bazelisk', 'bazel']) {
-		const probe = spawnSync(command, ['version'], {
-			cwd: root,
-			stdio: 'ignore',
-		});
-		if (!probe.error && probe.status === 0) {
+		if (isOnPath(command)) {
 			return { command, prefixArgs: [] };
 		}
 	}
@@ -223,9 +241,10 @@ function resolveBazelCommand() {
 
 const smokeDir = fs.mkdtempSync(path.join(os.tmpdir(), `${scenario.workspaceName}-`));
 let exitCode = 0;
+let bazel;
 try {
 	const credentialHelperArgs = writeGitHubCredentialHelper(smokeDir);
-	const bazel = resolveBazelCommand();
+	bazel = resolveBazelCommand();
 	const moduleBazel = [
         `module(name = "${scenario.workspaceName}", version = "0.0.0")`,
         ...scenario.modules.map(
@@ -241,7 +260,7 @@ try {
             bazel.command,
             [
                 ...bazel.prefixArgs,
-                '--ignore_all_rc_files',
+                ...bazelStartupArgs,
                 'mod',
                 'graph',
                 '--output=text',
@@ -292,7 +311,7 @@ try {
         bazel.command,
         [
             ...bazel.prefixArgs,
-            '--ignore_all_rc_files',
+            ...bazelStartupArgs,
             'build',
             ...scenario.targets,
 			...credentialHelperArgs,
@@ -319,6 +338,14 @@ try {
         console.log(`${scenario.successLabel}: ${scenario.targets.join(', ')}`);
     }
 } finally {
+	// Stop this workspace's server before its directory goes away. A failed
+	// shutdown does not change the result: the idle limit still applies.
+	if (bazel) {
+		spawnSync(bazel.command, [...bazel.prefixArgs, ...bazelStartupArgs, 'shutdown'], {
+			cwd: smokeDir,
+			stdio: 'ignore',
+		});
+	}
 	fs.rmSync(smokeDir, { recursive: true, force: true });
 }
 
