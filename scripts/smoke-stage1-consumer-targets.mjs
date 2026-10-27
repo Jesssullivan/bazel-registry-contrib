@@ -129,6 +129,24 @@ function rulesTectonicScenario() {
     };
 }
 
+// prompt_toon: public GitHub tag archive, token-free. It is a data-only
+// module: the consumer surface is the policy and skill filegroups at the
+// root package. The Chapel toolchains are dev dependencies, so a consumer
+// never registers them and never needs chpl.
+function promptToonScenario() {
+    const version = latestPublishedVersion('prompt_toon');
+    return {
+        key: 'prompt-toon-only',
+        workspaceName: 'tinyland_registry_prompt_toon_only_smoke',
+        modules: [{ moduleName: 'prompt_toon', version }],
+        targets: ['@prompt_toon//:delegation_policy', '@prompt_toon//:skills'],
+        graphExpectation: { moduleName: 'prompt_toon', version },
+        requiresPrivateArchiveAuth: false,
+        tokenFree: true,
+        successLabel: `Built token-free prompt_toon consumer targets (${version})`,
+    };
+}
+
 const scenarioFactories = {
     stage1: () => ({
         key: 'stage1',
@@ -155,6 +173,7 @@ const scenarioFactories = {
     'tempo-store-only': tempoStoreScenario,
     'public-frontend-only': publicFrontendScenario,
     'rules-tectonic-only': rulesTectonicScenario,
+    'prompt-toon-only': promptToonScenario,
 };
 
 const scenarioArgument = process.argv.find((argument) => argument.startsWith('--scenario='));
