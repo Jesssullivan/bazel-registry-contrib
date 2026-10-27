@@ -213,15 +213,19 @@ process.stdout.write(JSON.stringify({
 const bazelStartupArgs = ['--ignore_all_rc_files', '--max_idle_secs=120'];
 
 // Find the launcher on PATH without running it. `bazel version` starts a
-// server in the registry checkout (TIN-5770 R472).
+// Bazel JVM on every run (batch mode outside a workspace, a server under one).
+// A PATH lookup runs nothing (TIN-5770 R472).
 function isOnPath(command) {
 	for (const dir of (process.env.PATH ?? '').split(path.delimiter)) {
 		if (!dir) {
 			continue;
 		}
+		const candidate = path.join(dir, command);
 		try {
-			fs.accessSync(path.join(dir, command), fs.constants.X_OK);
-			return true;
+			fs.accessSync(candidate, fs.constants.X_OK);
+			if (fs.statSync(candidate).isFile()) {
+				return true;
+			}
 		} catch {
 			// Not in this PATH entry.
 		}
