@@ -53,6 +53,8 @@ jobs:
         run: npm run smoke:public-frontend-only
       - name: Build token-free rules_tectonic consumer
         run: npm run smoke:rules-tectonic-only
+      - name: Build token-free prompt_toon consumer
+        run: npm run smoke:prompt-toon-only
 
   # Authenticate only reviewed main code after a push or an explicit main-ref
   # dispatch in the authoritative repository. Never project secrets into PRs.
