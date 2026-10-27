@@ -106,13 +106,35 @@ process.stdout.write(JSON.stringify({
 	];
 }
 
+// Startup options for every Bazel call in the temporary workspace. The idle
+// limit bounds the server if this process dies before the shutdown in the
+// finally block runs (TIN-5770 R470).
+const bazelStartupArgs = ['--max_idle_secs=120'];
+
+// Find the launcher on PATH without running it. `bazel version` starts a
+// Bazel JVM on every run (batch mode outside a workspace, a server under one).
+// A PATH lookup runs nothing (TIN-5770 R472).
+function isOnPath(command) {
+	for (const dir of (process.env.PATH ?? '').split(path.delimiter)) {
+		if (!dir) {
+			continue;
+		}
+		const candidate = path.join(dir, command);
+		try {
+			fs.accessSync(candidate, fs.constants.X_OK);
+			if (fs.statSync(candidate).isFile()) {
+				return true;
+			}
+		} catch {
+			// Not in this PATH entry.
+		}
+	}
+	return false;
+}
+
 function resolveBazelCommand() {
 	for (const command of ['bazelisk', 'bazel']) {
-		const probe = spawnSync(command, ['version'], {
-			cwd: root,
-			stdio: 'ignore',
-		});
-		if (!probe.error && probe.status === 0) {
+		if (isOnPath(command)) {
 			return { command, prefixArgs: [] };
 		}
 	}
@@ -121,9 +143,11 @@ function resolveBazelCommand() {
 }
 
 const smokeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tinyland-registry-smoke-'));
+let exitCode = 0;
+let bazel;
 try {
 	const credentialHelperArgs = writeGitHubCredentialHelper(smokeDir);
-	const bazel = resolveBazelCommand();
+	bazel = resolveBazelCommand();
 	const moduleBazel = [
 		'module(name = "tinyland_registry_smoke", version = "0.0.0")',
 		...modules.map(
@@ -138,6 +162,7 @@ try {
 		bazel.command,
 		[
 			...bazel.prefixArgs,
+			...bazelStartupArgs,
 			'mod',
 			'graph',
 			...credentialHelperArgs,
@@ -152,20 +177,29 @@ try {
 
 	if (result.error) {
 		process.stderr.write(`${result.error.message}\n`);
-		process.exit(1);
-	}
-
-	if (result.status !== 0) {
+		exitCode = 1;
+	} else if (result.status !== 0) {
 		process.stderr.write(result.stdout ?? '');
 		process.stderr.write(result.stderr ?? '');
-		process.exit(result.status ?? 1);
+		exitCode = result.status ?? 1;
+	} else {
+		console.log(
+			`Resolved active registry modules: ${modules
+				.map(({ moduleName, version }) => `${moduleName}@${version}`)
+				.join(', ')}`,
+		);
 	}
-
-	console.log(
-		`Resolved active registry modules: ${modules
-			.map(({ moduleName, version }) => `${moduleName}@${version}`)
-			.join(', ')}`,
-	);
 } finally {
+	// Stop this workspace's server before its directory goes away. A failed
+	// shutdown does not change the result: the idle limit still applies.
+	// process.exit is deferred until here so this block always runs.
+	if (bazel) {
+		spawnSync(bazel.command, [...bazel.prefixArgs, ...bazelStartupArgs, 'shutdown'], {
+			cwd: smokeDir,
+			stdio: 'ignore',
+		});
+	}
 	fs.rmSync(smokeDir, { recursive: true, force: true });
 }
+
+process.exit(exitCode);

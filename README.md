@@ -87,7 +87,9 @@ commit — see `docs/bazel-adoption-v0.md` §3 for the full convention.
 - `npm run smoke:resolve` / `npm run smoke:stage1-consumer` — network and
   GitHub-token dependent; exercise `.bazelversion` and this registry's module
   metadata through real `bazel mod graph` / `bazel build` runs in throwaway
-  workspaces.
+  workspaces. Each smoke finds `bazelisk` or `bazel` on `PATH` without
+  running it, starts its server with `--max_idle_secs=120` and runs
+  `bazel shutdown` before it deletes the workspace (TIN-5770).
 - `npm run smoke:scheduling-kit-only` / `npm run
   smoke:scheduling-bridge-only` / `npm run smoke:tempo-store-only` — isolated
   one-direct-dependency consumers.
