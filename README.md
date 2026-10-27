@@ -106,6 +106,11 @@ commit — see `docs/bazel-adoption-v0.md` §3 for the full convention.
   is in the environment, so a green run proves the public path. Both run in the
   pull-request `validate` job.
 
+- `npm run smoke:prompt-toon-only` is a token-free consumer of the public
+  `prompt_toon` tag archive. It builds the data-only surface,
+  `//:delegation_policy` and `//:skills`, and checks that the graph selects the
+  latest published version. It runs in the pull-request `validate` job.
+
 The three isolated package smokes are required GF/self-hosted CI steps in
 `.github/workflows/validate.yml`. Bridge and Tempo consume commit-pinned private
 archives through GitHub's authenticated API tarball endpoint and fail closed
