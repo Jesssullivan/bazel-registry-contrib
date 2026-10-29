@@ -32,7 +32,11 @@ anything. When this file and those docs disagree, the docs win.
   - a GitHub release or tag archive;
   - an `api.github.com/repos/<owner>/<repo>/tarball/<ref>` tarball for a
     private repo;
-  - a versioned release asset of this repo.
+  - a versioned release asset of this repo;
+  - a `raw.githubusercontent.com/xoxd-ai/<repo>/<40-hex commit>/<path>.tar.gz`
+    (or `.tar.xz`) blob of a public `xoxd-ai` repo, with one well-formed
+    sha256 `integrity` (R581, Linear TIN-7477). Never a branch, tag or short
+    commit.
 
   Never use npm or GitHub Packages registry hosts. Always use SRI
   `integrity`.

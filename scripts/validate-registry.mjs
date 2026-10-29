@@ -31,28 +31,45 @@ function fail(message) {
 	process.exitCode = 1;
 }
 
-// Every module source must resolve to a GitHub release archive, never a
+// Every module source must resolve to a GitHub-hosted archive, never a
 // package-registry host. This is a deliberate refusal, not an oversight: an
 // npm-hosted tarball is mutable at the registry's discretion
-// (unpublish/republish can change bytes behind the same URL/version), and a
-// GitHub tag archive is the only distribution path this registry's publish
-// convention has ever used (see README "Validation" and the immutability
-// gate). Only two URL shapes are allowed, both already in production use
-// across modules/:
-//   1. https://github.com/<owner>/<repo>/archive/refs/tags/<tag>.tar.gz
+// (unpublish/republish can change bytes behind the same URL/version). Only
+// four URL shapes are allowed:
+//   1. https://github.com/<owner>/<repo>/releases/download/<tag>/<asset>.tar.gz
+//      -- versioned release assets (never the `latest` or `main` aliases).
+//   2. https://github.com/<owner>/<repo>/archive/refs/tags/<tag>.tar.gz
 //      -- public/private repos published as GitHub release tag archives.
-//   2. https://api.github.com/repos/<owner>/<repo>/tarball/<ref>
+//   3. https://api.github.com/repos/<owner>/<repo>/tarball/<ref>
 //      -- private repos pulled through GitHub's authenticated API tarball
 //         endpoint (see .github/workflows/validate.yml's token-scope check).
-// Scope note: this rule constrains the HOST and the URL SHAPE only. It
-// deliberately does not pin <owner>, so any GitHub account's tag archive
-// satisfies it -- the bytes behind an accepted URL are pinned by the sha256
-// SRI `integrity` check below, not by this rule. Add an owner allowlist here
-// if provenance, rather than host, ever needs to be enforced too.
+//   4. https://raw.githubusercontent.com/xoxd-ai/<repo>/<40-hex commit>/<path>.tar.{gz,xz}
+//      -- a committed blob of a public xoxd-ai repo at a full commit id
+//         (R581, Linear TIN-7477). The bytes are exactly the committed blob,
+//         so the sha256 is set by the publishing job alone, not by GitHub's
+//         archive generation. See RAW_COMMIT_SOURCE_URL_PATTERN below.
+// Scope note: shapes 1 to 3 constrain the HOST and the URL SHAPE only. They
+// deliberately do not pin <owner>, so any GitHub account's tag archive
+// satisfies them -- the bytes behind an accepted URL are pinned by the sha256
+// SRI `integrity` check below, not by this rule. Shape 4 is stricter: it pins
+// the owner to xoxd-ai and the ref to a 40-hex commit.
+
+// Shape 4. The owner is pinned to xoxd-ai and the ref to a full lowercase
+// 40-hex commit id, so a branch, a tag or a short sha is refused. Every path
+// segment is a plain name: no `.` or `..` segment, no empty segment, no
+// percent-encoding, no query and no fragment.
+const RAW_COMMIT_SOURCE_URL_PATTERN =
+	/^https:\/\/raw\.githubusercontent\.com\/xoxd-ai\/(?!\.{1,2}\/)[A-Za-z0-9_.-]+\/[0-9a-f]{40}\/(?:(?!\.{1,2}\/)[A-Za-z0-9._-]+\/)*[A-Za-z0-9._-]+\.tar\.(?:gz|xz)$/;
+
+// A shape-4 source must carry one well-formed sha256 SRI value (32 bytes,
+// base64), since that digest is the only thing that pins its bytes.
+const SHA256_SRI_PATTERN = /^sha256-[A-Za-z0-9+/]{43}=$/;
+
 const ALLOWED_SOURCE_URL_PATTERNS = [
 	/^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/releases\/download\/(?!latest\/|main\/)[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+\.tar\.gz$/,
 	/^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/archive\/refs\/tags\/[^/]+\.tar\.gz$/,
 	/^https:\/\/api\.github\.com\/repos\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/tarball\/[A-Za-z0-9._-]+$/,
+	RAW_COMMIT_SOURCE_URL_PATTERN,
 ];
 
 // Named explicitly so a refusal reads as "this host is banned", not just
@@ -60,7 +77,7 @@ const ALLOWED_SOURCE_URL_PATTERNS = [
 // threat this rule exists to catch.
 const EXPLICITLY_REFUSED_SOURCE_HOSTS = new Set(['registry.npmjs.org', 'npm.pkg.github.com']);
 
-function validateSourceUrlHost(url, relativePath) {
+function validateSourceUrlHost(url, integrity, relativePath) {
 	if (!url) {
 		fail(`${relativePath} is missing url`);
 		return;
@@ -83,7 +100,14 @@ function validateSourceUrlHost(url, relativePath) {
 
 	if (!ALLOWED_SOURCE_URL_PATTERNS.some((pattern) => pattern.test(url))) {
 		fail(
-			`${relativePath} url does not match an allowed source host/shape: ${url}. Expected a github.com release-tag archive, immutable release asset, or an api.github.com repos tarball URL.`,
+			`${relativePath} url does not match an allowed source host/shape: ${url}. Expected a github.com release-tag archive, immutable release asset, an api.github.com repos tarball URL, or a raw.githubusercontent.com/xoxd-ai/<repo>/<40-hex commit>/<path>.tar.{gz,xz} blob.`,
+		);
+		return;
+	}
+
+	if (RAW_COMMIT_SOURCE_URL_PATTERN.test(url) && !SHA256_SRI_PATTERN.test(integrity ?? '')) {
+		fail(
+			`${relativePath} raw.githubusercontent.com commit source needs exactly one well-formed sha256 SRI integrity (sha256- plus 44 base64 characters): ${integrity ?? '<missing>'}`,
 		);
 	}
 }
@@ -167,7 +191,7 @@ for (const sourceJsonPath of sourceJsonFiles) {
 	if (source.strip_prefix?.includes('tinyland.dev-')) {
 		fail(`${relativePath} strip_prefix still references tinyland.dev`);
 	}
-	validateSourceUrlHost(source.url, relativePath);
+	validateSourceUrlHost(source.url, source.integrity, relativePath);
 	if (!metadata) {
 		fail(`${relativePath} is missing sibling metadata.json`);
 		continue;
