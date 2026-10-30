@@ -69,8 +69,12 @@ commit — see `docs/bazel-adoption-v0.md` §3 for the full convention.
   every `source.json` has SRI integrity, no `tinyland.dev` tarball
   references, its `url` resolves to an allowed GitHub source host (a
   `github.com/<owner>/<repo>/archive/refs/tags/<tag>.tar.gz` release archive,
-  or an `api.github.com/repos/<owner>/<repo>/tarball/<ref>` authenticated
-  tarball for private repos -- package-registry hosts such as
+  a versioned `github.com/<owner>/<repo>/releases/download/<tag>/<asset>.tar.gz`
+  release asset, an `api.github.com/repos/<owner>/<repo>/tarball/<ref>`
+  authenticated tarball for private repos, or a
+  `raw.githubusercontent.com/xoxd-ai/<repo>/<40-hex commit>/<path>.tar.{gz,xz}`
+  blob of a public `xoxd-ai` repo with one well-formed sha256 integrity --
+  package-registry hosts such as
   `registry.npmjs.org` and `npm.pkg.github.com` are explicitly refused),
   `metadata.json` and `MODULE.bazel` agree on name/version, and
   `.bazelversion` matches the recorded estate pin. No network.

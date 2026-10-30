@@ -30,6 +30,9 @@ const bazelVersion = fs.readFileSync(path.join(repoRoot, '.bazelversion'), 'utf8
 
 const MODULE_NAME = 'fixture_module';
 const MODULE_VERSION = '0.1.0';
+const GOOD_INTEGRITY = 'sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
+const RAW_COMMIT = '0123456789abcdef0123456789abcdef01234567';
+const RAW_BASE = `https://raw.githubusercontent.com/xoxd-ai/bazel-payloads/${RAW_COMMIT}`;
 
 function writeJson(filePath, value) {
 	fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -39,8 +42,8 @@ function writeJson(filePath, value) {
 // Builds a minimal-but-complete one-module active registry fixture under a
 // fresh temp directory, with `sourceUrl` as its module's source.json url.
 // Every other field is a fixed known-good value so a failure can only ever
-// be attributed to the url under test.
-function buildFixtureRegistry(sourceUrl) {
+// be attributed to the url under test, or to `integrity` when a case sets it.
+function buildFixtureRegistry(sourceUrl, integrity = GOOD_INTEGRITY) {
 	const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bazel-registry-fixture-'));
 
 	writeJson(path.join(root, 'bazel_registry.json'), {
@@ -55,7 +58,7 @@ function buildFixtureRegistry(sourceUrl) {
 	writeJson(path.join(versionDir, 'source.json'), {
 		url: sourceUrl,
 		strip_prefix: `${MODULE_NAME}-${MODULE_VERSION}`,
-		integrity: 'sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
+		integrity,
 	});
 	writeJson(path.join(root, 'modules', MODULE_NAME, 'metadata.json'), {
 		homepage: 'https://github.com/tinyland-inc/fixture-module',
@@ -104,6 +107,194 @@ const cases = [
 		expectMessage: /does not match an allowed source host\/shape/,
 	},
 	{
+		name: 'accepts a raw.githubusercontent.com xoxd-ai blob at a 40-hex commit',
+		url: `${RAW_BASE}/payloads/fixture_module/0.1.0/fixture_module-0.1.0.tar.gz`,
+		expectPass: true,
+	},
+	{
+		name: 'accepts a raw.githubusercontent.com xoxd-ai .tar.xz blob at a 40-hex commit',
+		url: `${RAW_BASE}/node/v22.22.0/node-v22.22.0-linux-x64.tar.xz`,
+		expectPass: true,
+	},
+	{
+		name: 'refuses a raw.githubusercontent.com blob outside the xoxd-ai owner',
+		url: `https://raw.githubusercontent.com/someone-else/bazel-payloads/${RAW_COMMIT}/payloads/fixture_module-0.1.0.tar.gz`,
+		expectPass: false,
+		expectMessage: /does not match an allowed source host\/shape/,
+	},
+	{
+		name: 'refuses a raw.githubusercontent.com blob at a branch name',
+		url: 'https://raw.githubusercontent.com/xoxd-ai/bazel-payloads/main/payloads/fixture_module-0.1.0.tar.gz',
+		expectPass: false,
+		expectMessage: /does not match an allowed source host\/shape/,
+	},
+	{
+		name: 'refuses a raw.githubusercontent.com blob at a short commit',
+		url: `https://raw.githubusercontent.com/xoxd-ai/bazel-payloads/${RAW_COMMIT.slice(0, 12)}/payloads/fixture_module-0.1.0.tar.gz`,
+		expectPass: false,
+		expectMessage: /does not match an allowed source host\/shape/,
+	},
+	{
+		name: 'refuses a raw.githubusercontent.com blob at an uppercase commit',
+		url: `https://raw.githubusercontent.com/xoxd-ai/bazel-payloads/${RAW_COMMIT.toUpperCase()}/payloads/fixture_module-0.1.0.tar.gz`,
+		expectPass: false,
+		expectMessage: /does not match an allowed source host\/shape/,
+	},
+	{
+		name: 'refuses a raw.githubusercontent.com blob under refs/heads',
+		url: `https://raw.githubusercontent.com/xoxd-ai/bazel-payloads/refs/heads/${RAW_COMMIT}/payloads/fixture_module-0.1.0.tar.gz`,
+		expectPass: false,
+		expectMessage: /does not match an allowed source host\/shape/,
+	},
+	{
+		name: 'refuses a raw.githubusercontent.com blob with a dot-dot segment',
+		url: `${RAW_BASE}/payloads/../fixture_module-0.1.0.tar.gz`,
+		expectPass: false,
+		expectMessage: /does not match an allowed source host\/shape/,
+	},
+	{
+		name: 'refuses a raw.githubusercontent.com blob with an empty segment',
+		url: `${RAW_BASE}/payloads//fixture_module-0.1.0.tar.gz`,
+		expectPass: false,
+		expectMessage: /does not match an allowed source host\/shape/,
+	},
+	{
+		name: 'refuses a raw.githubusercontent.com blob with a query string',
+		url: `${RAW_BASE}/payloads/fixture_module-0.1.0.tar.gz?token=x`,
+		expectPass: false,
+		expectMessage: /does not match an allowed source host\/shape/,
+	},
+	{
+		name: 'refuses a raw.githubusercontent.com blob with a percent-encoded path',
+		url: `${RAW_BASE}/payloads/%2e%2e/fixture_module-0.1.0.tar.gz`,
+		expectPass: false,
+		expectMessage: /does not match an allowed source host\/shape/,
+	},
+	{
+		name: 'refuses a raw.githubusercontent.com blob over plain http',
+		url: `http://raw.githubusercontent.com/xoxd-ai/bazel-payloads/${RAW_COMMIT}/payloads/fixture_module-0.1.0.tar.gz`,
+		expectPass: false,
+		expectMessage: /does not match an allowed source host\/shape/,
+	},
+	{
+		name: 'refuses a raw.githubusercontent.com blob that is not a tar archive',
+		url: `${RAW_BASE}/payloads/fixture_module-0.1.0.zip`,
+		expectPass: false,
+		expectMessage: /does not match an allowed source host\/shape/,
+	},
+	{
+		name: 'refuses a raw.githubusercontent.com blob with a malformed sha256 integrity',
+		url: `${RAW_BASE}/payloads/fixture_module/0.1.0/fixture_module-0.1.0.tar.gz`,
+		integrity: 'sha256-AAAA',
+		expectPass: false,
+		expectMessage: /needs exactly one well-formed sha256 SRI integrity/,
+	},
+	{
+		name: 'refuses a raw.githubusercontent.com blob with more than one integrity value',
+		url: `${RAW_BASE}/payloads/fixture_module/0.1.0/fixture_module-0.1.0.tar.gz`,
+		integrity: `${GOOD_INTEGRITY} sha512-AAAA`,
+		expectPass: false,
+		expectMessage: /needs exactly one well-formed sha256 SRI integrity/,
+	},
+	{
+		name: 'refuses a raw.githubusercontent.com url embedded after a foreign host',
+		url: `https://evil.example/https://raw.githubusercontent.com/xoxd-ai/bazel-payloads/${RAW_COMMIT}/payloads/fixture_module-0.1.0.tar.gz`,
+		expectPass: false,
+		expectMessage: /does not match an allowed source host\/shape/,
+	},
+	{
+		name: 'refuses a lookalike raw-githubusercontent.com host',
+		url: `https://raw-githubusercontent.com/xoxd-ai/bazel-payloads/${RAW_COMMIT}/payloads/fixture_module-0.1.0.tar.gz`,
+		expectPass: false,
+		expectMessage: /does not match an allowed source host\/shape/,
+	},
+	{
+		name: 'refuses a lookalike raw.githubusercontent-com host',
+		url: `https://raw.githubusercontent-com/xoxd-ai/bazel-payloads/${RAW_COMMIT}/payloads/fixture_module-0.1.0.tar.gz`,
+		expectPass: false,
+		expectMessage: /does not match an allowed source host\/shape/,
+	},
+	{
+		name: 'refuses a raw.githubusercontent.com owner that only starts with xoxd-ai',
+		url: `https://raw.githubusercontent.com/xoxd-ai-evil/bazel-payloads/${RAW_COMMIT}/payloads/fixture_module-0.1.0.tar.gz`,
+		expectPass: false,
+		expectMessage: /does not match an allowed source host\/shape/,
+	},
+	{
+		name: 'refuses a raw.githubusercontent.com dot-dot repo segment',
+		url: `https://raw.githubusercontent.com/xoxd-ai/../${RAW_COMMIT}/payloads/fixture_module-0.1.0.tar.gz`,
+		expectPass: false,
+		expectMessage: /does not match an allowed source host\/shape/,
+	},
+	{
+		name: 'refuses a raw.githubusercontent.com dot repo segment',
+		url: `https://raw.githubusercontent.com/xoxd-ai/./${RAW_COMMIT}/main/payloads/fixture_module-0.1.0.tar.gz`,
+		expectPass: false,
+		expectMessage: /does not match an allowed source host\/shape/,
+	},
+	{
+		name: 'refuses a raw.githubusercontent.com percent-encoded repo segment',
+		url: `https://raw.githubusercontent.com/xoxd-ai/%2e%2e/${RAW_COMMIT}/payloads/fixture_module-0.1.0.tar.gz`,
+		expectPass: false,
+		expectMessage: /does not match an allowed source host\/shape/,
+	},
+	{
+		name: 'refuses a raw.githubusercontent.com 41-hex ref',
+		url: `https://raw.githubusercontent.com/xoxd-ai/bazel-payloads/${RAW_COMMIT}a/payloads/fixture_module-0.1.0.tar.gz`,
+		expectPass: false,
+		expectMessage: /does not match an allowed source host\/shape/,
+	},
+	{
+		name: 'refuses a raw.githubusercontent.com blob with a dot segment',
+		url: `${RAW_BASE}/payloads/./fixture_module-0.1.0.tar.gz`,
+		expectPass: false,
+		expectMessage: /does not match an allowed source host\/shape/,
+	},
+	{
+		name: 'refuses a raw.githubusercontent.com blob with a percent-encoded file name',
+		url: `${RAW_BASE}/payloads/fixture_module%2D0.1.0.tar.gz`,
+		expectPass: false,
+		expectMessage: /does not match an allowed source host\/shape/,
+	},
+	{
+		name: 'refuses a raw.githubusercontent.com blob with a fragment',
+		url: `${RAW_BASE}/payloads/fixture_module-0.1.0.tar.gz#x`,
+		expectPass: false,
+		expectMessage: /does not match an allowed source host\/shape/,
+	},
+	{
+		name: 'refuses a raw.githubusercontent.com .tgz blob',
+		url: `${RAW_BASE}/payloads/fixture_module-0.1.0.tgz`,
+		expectPass: false,
+		expectMessage: /does not match an allowed source host\/shape/,
+	},
+	{
+		name: 'refuses a raw.githubusercontent.com .tar.zst blob',
+		url: `${RAW_BASE}/payloads/fixture_module-0.1.0.tar.zst`,
+		expectPass: false,
+		expectMessage: /does not match an allowed source host\/shape/,
+	},
+	{
+		name: 'refuses a raw.githubusercontent.com .tar.bz2 blob',
+		url: `${RAW_BASE}/payloads/fixture_module-0.1.0.tar.bz2`,
+		expectPass: false,
+		expectMessage: /does not match an allowed source host\/shape/,
+	},
+	{
+		name: 'refuses a raw.githubusercontent.com blob whose well-formed sha256 follows another value',
+		url: `${RAW_BASE}/payloads/fixture_module/0.1.0/fixture_module-0.1.0.tar.gz`,
+		integrity: `sha256-AAAA ${GOOD_INTEGRITY}`,
+		expectPass: false,
+		expectMessage: /needs exactly one well-formed sha256 SRI integrity/,
+	},
+	{
+		name: 'refuses a raw.githubusercontent.com blob whose sha256 integrity has trailing whitespace',
+		url: `${RAW_BASE}/payloads/fixture_module/0.1.0/fixture_module-0.1.0.tar.gz`,
+		integrity: `${GOOD_INTEGRITY} `,
+		expectPass: false,
+		expectMessage: /needs exactly one well-formed sha256 SRI integrity/,
+	},
+	{
 		name: 'refuses registry.npmjs.org',
 		url: 'https://registry.npmjs.org/fixture-module/-/fixture-module-0.1.0.tgz',
 		expectPass: false,
@@ -126,7 +317,7 @@ const cases = [
 let failures = 0;
 
 for (const testCase of cases) {
-	const fixtureRoot = buildFixtureRegistry(testCase.url);
+	const fixtureRoot = buildFixtureRegistry(testCase.url, testCase.integrity);
 	try {
 		const { status, stderr, stdout } = runValidator(fixtureRoot);
 		const passed = status === 0;
