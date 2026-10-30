@@ -275,6 +275,12 @@ const cases = [
 		expectMessage: /does not match an allowed source host\/shape/,
 	},
 	{
+		name: 'refuses a raw.githubusercontent.com .tar.bz2 blob',
+		url: `${RAW_BASE}/payloads/fixture_module-0.1.0.tar.bz2`,
+		expectPass: false,
+		expectMessage: /does not match an allowed source host\/shape/,
+	},
+	{
 		name: 'refuses a raw.githubusercontent.com blob whose well-formed sha256 follows another value',
 		url: `${RAW_BASE}/payloads/fixture_module/0.1.0/fixture_module-0.1.0.tar.gz`,
 		integrity: `sha256-AAAA ${GOOD_INTEGRITY}`,
