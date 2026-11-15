@@ -1,7 +1,8 @@
 # Bazel adoption v0 (Step A) — TIN-3857
 
-Status: Step A only. Step B (Bazel 9.x migration) is explicitly out of scope
-here — see "Deferred: Step B" below.
+Status: this spec covers Step A. Step B (Bazel 9.x migration) is in progress
+under Linear TIN-5447, ruling R804: the estate value is 9.2.0. See "Step B
+(Bazel 9.x migration)" below.
 
 ## Scope
 
@@ -14,17 +15,21 @@ mechanism.
 ## 1. Single `.bazelversion` per repo, pinned to the estate value
 
 Every Tinyland repo that runs Bazel carries exactly one `.bazelversion` file
-at its root, pinned to the current estate-wide proven value: **8.2.1**.
+at its root, pinned to the current estate-wide value: **9.2.0**.
 
-- `greatfallstoolbus.org` already runs green on 8.2.1, as does a sibling
-  spoke; this registry's `.bazelversion` converges to match in this same
-  change (was 8.1.1).
+- The value moved from 8.2.1 to 9.2.0 under Linear TIN-5447, ruling R804
+  (2026-11-15). GloriousFlywheel runs 9.2.0 and its provider cell loads only
+  lockFileVersion 28. Each adopter moves its own `.bazelversion` and
+  `MODULE.bazel.lock` in its own pull request, per
+  [`bazel-9x-migration-spec-v0.md`](./bazel-9x-migration-spec-v0.md).
+- Step A set 8.2.1 under TIN-3857, after `greatfallstoolbus.org` and a
+  sibling spoke ran green on it (this registry was 8.1.1 then).
 - No repo should carry a second, competing Bazel version pin (nested
   `.bazelversion`, CI-only override, etc.) without an explicit, documented
   exception.
 - Bumping the estate value is a deliberate, cross-repo decision, not a
   per-repo drift. Each repo bump references the Linear issue that authorized
-  the estate-wide move (this one: TIN-3857).
+  the estate-wide move (8.2.1: TIN-3857. 9.2.0: TIN-5447, R804).
 
 **This registry's own `.bazelversion` is inert for direct Bazel invocation.**
 This repo has no `MODULE.bazel`, `WORKSPACE`, `BUILD`, or `.bazelrc` — it is
@@ -126,11 +131,13 @@ cross-checks `.bazelversion` against `package.json`'s `bazelEstate.version` —
 plus the immutability gate (`scripts/check-immutable-versions.sh`,
 `.github/workflows/immutability-gate.yml`).
 
-## Deferred: Step B (Bazel 9.x migration)
+## Step B (Bazel 9.x migration)
 
-Step B — migrating the estate to Bazel 9.x — is **explicitly deferred** and
-not addressed by this spec. It needs its own spec, which this registry
-carries separately as `docs/bazel-9x-migration-spec-v0.md` (TIN-3897). The
+Step B moves the estate to Bazel 9.x. This spec does not cover it. Its own
+spec is `docs/bazel-9x-migration-spec-v0.md` (TIN-3897). Step B was deferred
+here until ruling R804 on Linear TIN-5447 (2026-11-15) moved the estate value
+to 9.2.0. This registry's value moved first. Each adopter then moves its own
+`.bazelversion` and `MODULE.bazel.lock` in its own pull request. The
 estate's shared build/cache infrastructure sets the floor for what version
 any consumer can move to, and moving it has a cache-key invalidation blast
 radius across every cache-attached consumer (shared remote cache keys are
