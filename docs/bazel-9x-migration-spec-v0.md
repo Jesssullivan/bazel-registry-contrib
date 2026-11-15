@@ -1,7 +1,9 @@
 # Bazel 9.x migration spec v0 (Step B) — TIN-3897
 
 Status: specification only. **No version is bumped by this change**, in this
-repo or any other. Step B is the second half of the Bazel SSOT convergence:
+repo or any other. Step 1 (this registry) ran later under Linear TIN-5447,
+ruling R804 (2026-11-15), which moved the estate value to 9.2.0.
+Step B is the second half of the Bazel SSOT convergence:
 Step A (TIN-3857) converges the estate on one proven 8.x value and pins this
 registry by exact SHA; Step B says how the estate moves that value onto the
 Bazel 9 latest line, in what order, and what breaks if the order is wrong.

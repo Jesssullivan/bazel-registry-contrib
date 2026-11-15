@@ -17,6 +17,6 @@
     "smoke:prompt-toon-only": "node scripts/smoke-stage1-consumer-targets.mjs --scenario=prompt-toon-only"
   },
   "bazelEstate": {
-    "version": "8.2.1"
+    "version": "9.2.0"
   }
 }

@@ -125,7 +125,9 @@ retain browser-archive URLs that GitHub App tokens cannot read.
 
 The aggregate audit (`smoke:resolve`) leaves out exactly one module,
 `dsa_study_packet`: its 0.2.0 entry pulls rules_python 2.4.0, which needs
-Bazel 9 (`flag_alias`) and so cannot resolve under the estate Bazel 8.2.1.
+Bazel 9 (`flag_alias`). It was excluded while the estate Bazel was 8.2.1.
+The estate value is now 9.2.0 (TIN-5447, R804). Lifting the exclusion is a
+follow-up once the trusted log shows the next failure.
 `AUDIT_EXCLUDED_MODULES` in `scripts/smoke-active-registry.mjs` holds the list
 and the reason, and the step logs every exclusion. `continue-on-error` stays
 on this step until the post-merge trusted log shows what the next failure is;
