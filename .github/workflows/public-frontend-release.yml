@@ -11,6 +11,7 @@ on:
           - public-frontend-v0.1.1
           - xoxd-spectrogram-public-v1.0.1
           - xoxd-spectrogram-public-v1.1.0
+          - xoxd-projection-v1.0.0
         default: site-scaffold-public-v0.1.1
       publish:
         description: Publish the audited versioned assets after verification
@@ -43,7 +44,7 @@ jobs:
           jq -e '(.sources | keys) - ["scaffold", "theme", "xoxd", "spectrogram"] == []' "$plan" >/dev/null || { echo 'Plan names an unknown source; refusing.' >&2; exit 1; }
           jq -e '.sources.scaffold != null' "$plan" >/dev/null || { echo 'Plan must pin the scaffold source; refusing.' >&2; exit 1; }
           jq -e '[.registry_commit, .sources[]] | all(type == "string" and test("^[0-9a-f]{40}$"))' "$plan" >/dev/null || { echo 'Plan revisions must be 40-hex commit SHAs; refusing.' >&2; exit 1; }
-          jq -e '(.exporter // "scaffold") as $e | ["scaffold", "spectrogram"] | index($e) != null' "$plan" >/dev/null || { echo 'Unknown release exporter; refusing.' >&2; exit 1; }
+          jq -e '(.exporter // "scaffold") as $e | ["scaffold", "scaffold-modules", "spectrogram"] | index($e) != null' "$plan" >/dev/null || { echo 'Unknown release exporter; refusing.' >&2; exit 1; }
           jq -e '(.template_only // false) | type == "boolean"' "$plan" >/dev/null || { echo 'template_only must be a boolean; refusing.' >&2; exit 1; }
           {
             jq -r '.sources | to_entries[] | "\(.key)=\(.value)"' "$plan"
@@ -127,6 +128,14 @@ jobs:
               export_args=()
               if [ "$TEMPLATE_ONLY" = true ]; then export_args+=(--template-only); fi
               python3 -I _source/scaffold/scripts/export-public-frontend.py --theme-source _source/theme --output public-assets --registry-commit "$REGISTRY_COMMIT" "${export_args[@]}"
+              ;;
+            scaffold-modules)
+              # The exporter writes the plan's tag and exactly the plan's modules.
+              module_args=()
+              while IFS= read -r module; do module_args+=(--module "$module"); done < <(jq -r '.artifacts[].module' "releases/${RELEASE_TAG}/plan.json")
+              theme_args=()
+              if [ -d _source/theme ]; then theme_args+=(--theme-source _source/theme); fi
+              python3 -I _source/scaffold/scripts/export-public-frontend.py "${theme_args[@]}" --output public-assets --registry-commit "$REGISTRY_COMMIT" --tag "$RELEASE_TAG" "${module_args[@]}"
               ;;
             spectrogram)
               # The module's own exporter reads the committed tree at the pinned revision.
