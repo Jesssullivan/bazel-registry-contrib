@@ -1,0 +1,10 @@
+{
+  "url": "https://api.github.com/repos/xoxd-ai/scheduling-kit/tarball/e439322375843aac69ff89c6c89dfe9240f3d11a",
+  "strip_prefix": "xoxd-ai-scheduling-kit-e439322375843aac69ff89c6c89dfe9240f3d11a",
+  "integrity": "sha256-BR+YHh0lkom2kvggSjC3BF9T9upuq71/qxuNkr9Iffs=",
+  "archive_type": "tar.gz",
+  "patches": {
+    "module_dot_bazel_version.patch": "sha256-f/Z/UQ4L3Lk1UtuTC6KoTsxZ/tIW7l+vK1m03Z2xUx0="
+  },
+  "patch_strip": 1
+}

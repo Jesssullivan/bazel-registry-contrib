@@ -1,0 +1,11 @@
+--- a/MODULE.bazel
++++ b/MODULE.bazel
+@@ -22,7 +22,7 @@
+ 
+ module(
+     name = "tummycrypt_scheduling_kit",
+-    version = "0.11.1",
++    version = "0.11.1.bcr.1",
+     compatibility_level = 1,
+ )
+ 
