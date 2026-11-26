@@ -1,0 +1,20 @@
+--- a/MODULE.bazel
++++ b/MODULE.bazel
+@@ -25,7 +25,7 @@
+ 
+ module(
+     name = "tummycrypt_scheduling_bridge",
+-    version = "0.8.0",
++    version = "0.8.0.bcr.1",
+     compatibility_level = 1,
+ )
+ 
+@@ -52,7 +52,7 @@
+ 
+ # Primary dependency: scheduling-kit (resolved via the Bzlmod module graph from
+ # tinyland-inc/bazel-registry; the npm edge is retired — see BUILD.bazel npm_link_package).
+-bazel_dep(name = "tummycrypt_scheduling_kit", version = "0.12.0")
++bazel_dep(name = "tummycrypt_scheduling_kit", version = "0.12.0.bcr.1")
+ 
+ # =============================================================================
+ # Node.js toolchain
