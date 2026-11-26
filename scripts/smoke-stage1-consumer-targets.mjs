@@ -6,16 +6,32 @@ import { spawnSync } from 'node:child_process';
 
 const root = process.cwd();
 
+// Bazel's order for release identifiers: numeric parts compare as numbers and
+// sort before alphanumeric parts, alphanumeric parts compare as strings, and a
+// version that is a prefix of another sorts first. So 0.12.0 < 0.12.0.bcr.1 <
+// 0.12.1, the re-listing convention of the Bazel Central Registry (TIN-8727).
+function compareIdentifiers(left, right) {
+    const leftNumeric = /^[0-9]+$/.test(left);
+    const rightNumeric = /^[0-9]+$/.test(right);
+    if (leftNumeric && rightNumeric) {
+        return Number(left) - Number(right);
+    }
+    if (leftNumeric !== rightNumeric) {
+        return leftNumeric ? -1 : 1;
+    }
+    return left < right ? -1 : left > right ? 1 : 0;
+}
+
 function compareVersions(left, right) {
-    const leftParts = left.split('.').map(Number);
-    const rightParts = right.split('.').map(Number);
-    for (let index = 0; index < Math.max(leftParts.length, rightParts.length); index += 1) {
-        const delta = (leftParts[index] ?? 0) - (rightParts[index] ?? 0);
+    const leftParts = left.split('.');
+    const rightParts = right.split('.');
+    for (let index = 0; index < Math.min(leftParts.length, rightParts.length); index += 1) {
+        const delta = compareIdentifiers(leftParts[index], rightParts[index]);
         if (delta !== 0) {
             return delta;
         }
     }
-    return 0;
+    return leftParts.length - rightParts.length;
 }
 
 function latestPublishedVersion(moduleName) {
@@ -55,8 +71,10 @@ function schedulingKitScenario() {
         modules: [{ moduleName: 'tummycrypt_scheduling_kit', version }],
         targets: ['@tummycrypt_scheduling_kit//:pkg'],
         graphExpectation: { moduleName: 'tummycrypt_scheduling_kit', version },
-        requiresPrivateArchiveAuth: false,
-        successLabel: 'Built isolated scheduling-kit consumer target',
+        // xoxd-ai/scheduling-kit is private since November 26, 2026 (TIN-8727),
+        // so this scenario runs only in the trusted job with the App token.
+        requiresPrivateArchiveAuth: true,
+        successLabel: `Built isolated scheduling-kit consumer target (${version})`,
     };
 }
 

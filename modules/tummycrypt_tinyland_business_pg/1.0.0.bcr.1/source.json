@@ -1,0 +1,10 @@
+{
+  "url": "https://api.github.com/repos/xoxd-ai/tinyland-business-pg/tarball/aa11ca34209befabcb2909f5c8503c08f29b36c4",
+  "strip_prefix": "xoxd-ai-tinyland-business-pg-aa11ca34209befabcb2909f5c8503c08f29b36c4",
+  "integrity": "sha256-X8OeIu8humE6GLFDBZL05A75DLrN9og7f+lUbSWGfxw=",
+  "archive_type": "tar.gz",
+  "patches": {
+    "module_dot_bazel_version.patch": "sha256-F4li9V4X2S2jLPrvNL+aIEv+7xTsMDdMZgEYvypE0+Q="
+  },
+  "patch_strip": 1
+}

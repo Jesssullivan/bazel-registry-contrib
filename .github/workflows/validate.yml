@@ -27,6 +27,8 @@ permissions:
 jobs:
   # Fork PRs receive only the repository read token. These checks read registry
   # metadata and public source archives; no private-source App token is needed.
+  # A module whose source repository is private is built only in the trusted
+  # job below (TIN-8727).
   validate:
     runs-on: tinyland-nix
     steps:
@@ -47,8 +49,6 @@ jobs:
         run: npm run test:validate-source-hosts
       - name: Prove the owner-rename allowance admits one shape and refuses its neighbours
         run: npm run test:owner-rename-record
-      - name: Build isolated scheduling-kit consumer
-        run: npm run smoke:scheduling-kit-only
       - name: Build token-free public frontend consumer (chrome + theme)
         run: npm run smoke:public-frontend-only
       - name: Build token-free rules_tectonic consumer
@@ -81,6 +81,7 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: |-
             scheduling-bridge
+            scheduling-kit
             tempo-store
             tinyland-file-logger
             tinyland-publishing-hooks
@@ -89,6 +90,7 @@ jobs:
             tinyland-server-config
             tinyland-server-utils
             tinyland-tracing-middleware
+            tinyland-business-pg
           permission-contents: read
       - name: Verify private source token scope
         env:
@@ -126,6 +128,10 @@ jobs:
           bazelisk-cache: true
           repository-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
+      - name: Build isolated scheduling-kit consumer
+        run: npm run smoke:scheduling-kit-only
+        env:
+          TINYLAND_REGISTRY_GITHUB_TOKEN: ${{ steps.tinyland-registry-token.outputs.token }}
       - name: Build isolated tempo-store consumer
         run: npm run smoke:tempo-store-only
         env:
