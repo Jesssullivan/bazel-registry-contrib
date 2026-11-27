@@ -121,9 +121,8 @@ if (!fs.existsSync(modulesDir)) {
 	fail(`module_base_path does not exist: ${moduleBasePath}`);
 }
 
-// .bazelversion is not read by any direct Bazel invocation at this repo's
-// root (there is no MODULE.bazel/WORKSPACE/BUILD/.bazelrc here) -- it is
-// only ever consumed by copy, into the smoke-test workspaces built by
+// .bazelversion runs this repo's own checks (the root MODULE.bazel holds only
+// those) and is consumed by copy into the smoke-test workspaces built by
 // scripts/smoke-active-registry.mjs and scripts/smoke-stage1-consumer-targets.mjs
 // (see docs/bazel-adoption-v0.md #1). That copy step makes a silent drift
 // between .bazelversion and the estate-wide pin invisible to a bare `git

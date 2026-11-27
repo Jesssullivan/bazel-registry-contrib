@@ -1,18 +1,12 @@
 name: Validate registry
 
-# RUNNER CLASS (TIN-3914): GitHub-hosted runners are not available to this org
-# — hosted jobs abort with "The job was not started because your account is
-# locked due to a billing issue" before step 1 executes. This workflow runs on
-# the GloriousFlywheel cache-fronted ARC pool (`tinyland-nix`), matching the
-# estate convention used by greatfallstoolbus.org and GloriousFlywheel.
-#
-# The `tinyland-nix` runner image (ghcr.io/tinyland-inc/actions-runner-nix)
-# bakes in git, curl, jq, xz-utils, ca-certificates, Determinate Nix, and the
-# runner-bundled Node 24 on PATH. It deliberately does NOT expose `npm`/`npx`
-# on PATH, so the `actions/setup-node` step below is load-bearing here rather
-# than merely a version pin: it is what puts `npm` on PATH for the `npm run`
-# steps. There is no sudo/apt on this image; setup-node needs none (it extracts
-# into the runner tool cache).
+# GloriousFlywheel runs this repository's checks: the validate and
+# immutability-gate rows of .github/lanes.json run for every pushed head on
+# GF's own scheduler, as check runs of the gf-xoxd-ai App (TIN-8469). This
+# workflow keeps only the one job GF cannot run yet. The private-consumer
+# smokes need the registry-reader App's private key, which only Actions holds,
+# to mint a token for the private source archives. A GF worker has no network,
+# and GF's source preparation fetches public archives only.
 
 on:
   pull_request:
@@ -25,45 +19,26 @@ permissions:
   contents: read
 
 jobs:
-  # Fork PRs receive only the repository read token. These checks read registry
-  # metadata and public source archives; no private-source App token is needed.
-  # A module whose source repository is private is built only in the trusted
-  # job below (TIN-8727).
-  validate:
-    runs-on: tinyland-nix
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - uses: bazel-contrib/setup-bazel@8cb04a772ab4c1eb984e9c1b493a182e96c5e425
-        with:
-          bazelisk-cache: true
-          repository-cache: true
-          cache-save: ${{ github.event_name != 'pull_request' }}
-      - name: Validate static registry contracts
-        run: npm run validate
-      - name: Prove source-host allowlist rejects non-GitHub sources
-        run: npm run test:validate-source-hosts
-      - name: Prove the owner-rename allowance admits one shape and refuses its neighbours
-        run: npm run test:owner-rename-record
-      - name: Build token-free public frontend consumer (chrome + theme)
-        run: npm run smoke:public-frontend-only
-      - name: Build token-free rules_tectonic consumer
-        run: npm run smoke:rules-tectonic-only
-      - name: Build token-free prompt_toon consumer
-        run: npm run smoke:prompt-toon-only
-
-  # Authenticate only reviewed main code after a push or an explicit main-ref
-  # dispatch in the authoritative repository. Never project secrets into PRs.
+  # Authenticate main code after a push or an explicit main-ref dispatch, and a
+  # pull request whose head branch lives in this repository. Its author already
+  # has write access here. A fork PR never reaches this job, so it never sees
+  # the App secrets. Dependabot PRs get no Actions secrets, so they skip it too.
+  # It runs on same-repository PRs since TIN-8910. It reports beside GF's checks
+  # and is not a required check in .github/rulesets/default-branch.json.
   trusted-private-consumers:
     if: >-
       github.repository == 'xoxd-ai/bazel-registry' &&
-      github.ref == 'refs/heads/main' &&
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-    needs: validate
+      (
+        (
+          github.ref == 'refs/heads/main' &&
+          (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        ) ||
+        (
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          github.event.pull_request.user.login != 'dependabot[bot]'
+        )
+      )
     runs-on: tinyland-nix
     steps:
       - uses: actions/checkout@v4

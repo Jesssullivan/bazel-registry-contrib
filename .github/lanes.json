@@ -1,0 +1,34 @@
+{
+	"$comment": "GloriousFlywheel action plan (ActionPlan/v5, TIN-8469). GF's head work runs every row for every pushed head on its own scheduler and posts one check run per row. Each row is the Bazel a developer runs with --config=gf: just check and just immutability-gate.",
+	"schema_version": 5,
+	"actions": {
+		"validate": {
+			"command": "test",
+			"targets": [
+				"//:validate_registry_test",
+				"//:source_hosts_test",
+				"//:owner_rename_record_test",
+				"//:smoke_pins_test",
+				"//:immutability_gate_self_test",
+				"@xoxd_public_chrome//:pkg",
+				"@xoxd_theme//:pkg",
+				"@rules_tectonic//tectonic:all",
+				"@prompt_toon//:delegation_policy",
+				"@prompt_toon//:skills"
+			],
+			"capability": "rbe-linux-x86_64",
+			"result": {
+				"mode": "status-only"
+			}
+		},
+		"immutability-gate": {
+			"command": "test",
+			"targets": ["//:immutability_gate_test"],
+			"source_input": "git-history",
+			"capability": "rbe-linux-x86_64",
+			"result": {
+				"mode": "status-only"
+			}
+		}
+	}
+}
