@@ -56,13 +56,25 @@ jobs:
       - name: Build token-free prompt_toon consumer
         run: npm run smoke:prompt-toon-only
 
-  # Authenticate only reviewed main code after a push or an explicit main-ref
-  # dispatch in the authoritative repository. Never project secrets into PRs.
+  # Authenticate main code after a push or an explicit main-ref dispatch, and a
+  # pull request whose head branch lives in this repository. Its author already
+  # has write access here. A fork PR never reaches this job, so it never sees
+  # the App secrets. Dependabot PRs get no Actions secrets, so they skip it too.
+  # The I-24 fifteenth interview made this a required check (TIN-8910).
   trusted-private-consumers:
     if: >-
       github.repository == 'xoxd-ai/bazel-registry' &&
-      github.ref == 'refs/heads/main' &&
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+      (
+        (
+          github.ref == 'refs/heads/main' &&
+          (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        ) ||
+        (
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          github.event.pull_request.user.login != 'dependabot[bot]'
+        )
+      )
     needs: validate
     runs-on: tinyland-nix
     steps:
