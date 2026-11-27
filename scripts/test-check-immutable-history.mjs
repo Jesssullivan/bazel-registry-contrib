@@ -21,6 +21,7 @@ for (const fixture of cases) {
 		commits: parseHistory(fixture.patch),
 		headFiles: new Map(Object.entries(fixture.head)),
 		renames,
+		head: fixture.head_commit,
 	});
 	const outcome = verdict.violations.length > 0 ? 'fail' : verdict.rerecorded.length > 0 ? 'rerecord' : 'pass';
 	assert.equal(outcome, fixture.expect, `${fixture.name}: expected ${fixture.expect}, got ${outcome} ${JSON.stringify(verdict)}`);
@@ -40,4 +41,13 @@ const unrecorded = evaluate({
 });
 assert.equal(unrecorded.violations.length, 1, 'no recorded rename means no allowance');
 
-process.stdout.write(`check-immutable-history: ${cases.length} fixture windows and 2 controls behave as recorded\n`);
+// A merge with no parent record cannot be judged, so the window is refused.
+const evil = cases.find((fixture) => fixture.name === 'merge that edits a shipped source.json');
+const unparented = evil.patch.replace(/^commit ([0-9a-f]{40})(?: [0-9a-f]{40})+$/gm, 'commit $1\nMerge: a b');
+assert.throws(
+	() => evaluate({ commits: parseHistory(unparented), headFiles: new Map(Object.entries(evil.head)), renames }),
+	/no parent record/,
+	'a merge without parents is refused',
+);
+
+process.stdout.write(`check-immutable-history: ${cases.length} fixture windows and 3 controls behave as recorded\n`);

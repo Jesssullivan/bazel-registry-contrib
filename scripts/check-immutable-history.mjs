@@ -31,7 +31,7 @@ import { judgeRenameRecord } from './owner-rename-record.mjs';
 
 export class HistoryError extends Error {}
 
-const COMMIT = /^commit ([0-9a-f]{40})(?: .*)?\n$/;
+const COMMIT = /^commit ([0-9a-f]{40})((?: [0-9a-f]{40})*)(?: .*)?\n$/;
 const HUNK = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/;
 const NO_NEWLINE = '\\ No newline at end of file\n';
 
@@ -81,7 +81,8 @@ export function parseHistory(text) {
 		const line = lines[index];
 		const commitMatch = COMMIT.exec(line);
 		if (commitMatch) {
-			commit = { sha: commitMatch[1], merge: false, files: [] };
+			const parents = commitMatch[2].split(' ').filter(Boolean);
+			commit = { sha: commitMatch[1], parents, merge: parents.length > 1, files: [] };
 			commits.push(commit);
 			index += 1;
 			continue;
@@ -221,9 +222,35 @@ function undoHunks(lines, hunks) {
 	return result;
 }
 
+// firstParentChain returns the commits that take the head's tree back to the
+// base, newest first. GF's history input names each commit's parents
+// (--parents) and gives a merge its diff against its first parent
+// (--diff-merges=first-parent), so the first-parent chain's diffs add up to
+// the base-to-head change, a merge's own edits included. A commit reached only
+// through a merge's second parent is already inside that merge's diff, so it
+// is not undone twice. A window without parent records is linear: every
+// commit is on the chain, and a merge in it cannot be judged.
+function firstParentChain(commits, head) {
+	if (!commits.some((commit) => commit.parents.length > 0)) {
+		if (commits.some((commit) => commit.merge)) {
+			throw new HistoryError('a merge commit in the window has no parent record');
+		}
+		return commits;
+	}
+	const bySha = new Map(commits.map((commit) => [commit.sha, commit]));
+	if (head === undefined || !bySha.has(head)) {
+		throw new HistoryError('the window does not hold its head commit');
+	}
+	const chain = [];
+	for (let sha = head; bySha.has(sha); sha = bySha.get(sha).parents[0]) {
+		chain.push(bySha.get(sha));
+	}
+	return chain;
+}
+
 // headFiles maps every modules/ path at the head to its text. Returns the
 // gate's verdict for the window.
-export function evaluate({ commits, headFiles, renames }) {
+export function evaluate({ commits, headFiles, renames, head }) {
 	const state = new Map();
 	const read = (filePath) => {
 		if (!state.has(filePath)) {
@@ -241,8 +268,7 @@ export function evaluate({ commits, headFiles, renames }) {
 		if (mode && entry.mode === 'HEAD') entry.headMode = mode;
 	};
 
-	for (const commit of commits) {
-		if (commit.merge) continue;
+	for (const commit of firstParentChain(commits, head)) {
 		for (const file of commit.files) {
 			if (file.status === 'add') {
 				if (!tracked(file.b)) continue;
@@ -382,7 +408,7 @@ function main() {
 	let verdict;
 	try {
 		const renames = JSON.parse(fs.readFileSync(path.join(root, 'registry-owner-renames.json'), 'utf8')).renames;
-		verdict = evaluate({ commits: parseHistory(text), headFiles: listTree(root, 'modules', new Map()), renames });
+		verdict = evaluate({ commits: parseHistory(text), headFiles: listTree(root, 'modules', new Map()), renames, head });
 	} catch (error) {
 		if (error instanceof HistoryError) return incomplete(error.message);
 		throw error;

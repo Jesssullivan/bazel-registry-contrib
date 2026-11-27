@@ -1,5 +1,5 @@
 {
-	"$comment": "git log -p -U0 windows over a one-module fixture registry, recorded with git for scripts/test-check-immutable-history.mjs (TIN-8469). head is the modules/ tree after the window.",
+	"$comment": "git log -p -U0 windows over a one-module fixture registry, recorded with git for scripts/test-check-immutable-history.mjs (TIN-8469). head is the modules/ tree after the window. The two merge cases were recorded with --parents and --diff-merges=first-parent, as GF records them; head_commit names their head.",
 	"cases": [
 		{
 			"name": "new version, edited within the window",
@@ -108,6 +108,30 @@
 			"head": {
 				"modules/m/1.0.0/MODULE.bazel": "module(name = \"m\", version = \"1.0.0\")\n# replaced\n",
 				"modules/m/metadata.json": "{\"versions\": [\"1.0.0\"]}"
+			}
+		},
+		{
+			"name": "merge that edits a shipped source.json",
+			"expect": "fail",
+			"head_commit": "191448a4af8c8958ffb90367be02e19e7f56dece",
+			"patch": "commit 191448a4af8c8958ffb90367be02e19e7f56dece bb9cda05bc4ee90c43b70c204425c0fa66d53b02 554fc17de40c6a6342225e3438cfe4704e79b354\nMerge: bb9cda0 554fc17\nAuthor: Fixture <fixture@example.invalid>\nDate:   Thu Nov 26 00:00:00 2026 +0000\n\n    Merge main TIN-8469\n\ndiff --git a/modules/m/1.0.0/source.json b/modules/m/1.0.0/source.json\nindex b54cbf7..72b1db4 100644\n--- a/modules/m/1.0.0/source.json\n+++ b/modules/m/1.0.0/source.json\n@@ -1 +1 @@\n-{\"url\": \"https://example.invalid/m-1.0.0.tar.gz\", \"integrity\": \"sha256-AAAA\"}\n+{\"url\": \"https://example.invalid/m-1.0.0.tar.gz\", \"integrity\": \"sha256-BBBB\"}\ndiff --git a/modules/m/1.1.0/MODULE.bazel b/modules/m/1.1.0/MODULE.bazel\nnew file mode 100644\nindex 0000000..d645f09\n--- /dev/null\n+++ b/modules/m/1.1.0/MODULE.bazel\n@@ -0,0 +1 @@\n+module(name = \"m\", version = \"1.1.0\")\ndiff --git a/modules/m/metadata.json b/modules/m/metadata.json\nindex ba24d5e..bf81307 100644\n--- a/modules/m/metadata.json\n+++ b/modules/m/metadata.json\n@@ -1 +1 @@\n-{\"versions\": [\"1.0.0\"]}\n+{\"versions\": [\"1.0.0\", \"1.1.0\"]}\n\ncommit bb9cda05bc4ee90c43b70c204425c0fa66d53b02 a421156d056dbf80be9058354b62c26ddb677635\nAuthor: Fixture <fixture@example.invalid>\nDate:   Thu Nov 26 00:00:00 2026 +0000\n\n    pr TIN-8469\n\ndiff --git a/NOTE b/NOTE\nnew file mode 100644\nindex 0000000..3316c86\n--- /dev/null\n+++ b/NOTE\n@@ -0,0 +1 @@\n+# pr note\n\ncommit 554fc17de40c6a6342225e3438cfe4704e79b354 a421156d056dbf80be9058354b62c26ddb677635\nAuthor: Fixture <fixture@example.invalid>\nDate:   Thu Nov 26 00:00:00 2026 +0000\n\n    main mints 1.1.0 TIN-8469\n\ndiff --git a/modules/m/1.1.0/MODULE.bazel b/modules/m/1.1.0/MODULE.bazel\nnew file mode 100644\nindex 0000000..d645f09\n--- /dev/null\n+++ b/modules/m/1.1.0/MODULE.bazel\n@@ -0,0 +1 @@\n+module(name = \"m\", version = \"1.1.0\")\ndiff --git a/modules/m/metadata.json b/modules/m/metadata.json\nindex ba24d5e..bf81307 100644\n--- a/modules/m/metadata.json\n+++ b/modules/m/metadata.json\n@@ -1 +1 @@\n-{\"versions\": [\"1.0.0\"]}\n+{\"versions\": [\"1.0.0\", \"1.1.0\"]}\n",
+			"head": {
+				"modules/m/1.0.0/MODULE.bazel": "module(name = \"m\", version = \"1.0.0\")\n",
+				"modules/m/1.0.0/source.json": "{\"url\": \"https://example.invalid/m-1.0.0.tar.gz\", \"integrity\": \"sha256-BBBB\"}\n",
+				"modules/m/1.1.0/MODULE.bazel": "module(name = \"m\", version = \"1.1.0\")\n",
+				"modules/m/metadata.json": "{\"versions\": [\"1.0.0\", \"1.1.0\"]}\n"
+			}
+		},
+		{
+			"name": "merge of main that mints a new version",
+			"expect": "pass",
+			"head_commit": "857bf55b3db367f8a55697b64744f32359cb4a43",
+			"patch": "commit 857bf55b3db367f8a55697b64744f32359cb4a43 bb9cda05bc4ee90c43b70c204425c0fa66d53b02 554fc17de40c6a6342225e3438cfe4704e79b354\nMerge: bb9cda0 554fc17\nAuthor: Fixture <fixture@example.invalid>\nDate:   Thu Nov 26 00:00:00 2026 +0000\n\n    Merge main TIN-8469\n\ndiff --git a/modules/m/1.1.0/MODULE.bazel b/modules/m/1.1.0/MODULE.bazel\nnew file mode 100644\nindex 0000000..d645f09\n--- /dev/null\n+++ b/modules/m/1.1.0/MODULE.bazel\n@@ -0,0 +1 @@\n+module(name = \"m\", version = \"1.1.0\")\ndiff --git a/modules/m/metadata.json b/modules/m/metadata.json\nindex ba24d5e..bf81307 100644\n--- a/modules/m/metadata.json\n+++ b/modules/m/metadata.json\n@@ -1 +1 @@\n-{\"versions\": [\"1.0.0\"]}\n+{\"versions\": [\"1.0.0\", \"1.1.0\"]}\n\ncommit bb9cda05bc4ee90c43b70c204425c0fa66d53b02 a421156d056dbf80be9058354b62c26ddb677635\nAuthor: Fixture <fixture@example.invalid>\nDate:   Thu Nov 26 00:00:00 2026 +0000\n\n    pr TIN-8469\n\ndiff --git a/NOTE b/NOTE\nnew file mode 100644\nindex 0000000..3316c86\n--- /dev/null\n+++ b/NOTE\n@@ -0,0 +1 @@\n+# pr note\n\ncommit 554fc17de40c6a6342225e3438cfe4704e79b354 a421156d056dbf80be9058354b62c26ddb677635\nAuthor: Fixture <fixture@example.invalid>\nDate:   Thu Nov 26 00:00:00 2026 +0000\n\n    main mints 1.1.0 TIN-8469\n\ndiff --git a/modules/m/1.1.0/MODULE.bazel b/modules/m/1.1.0/MODULE.bazel\nnew file mode 100644\nindex 0000000..d645f09\n--- /dev/null\n+++ b/modules/m/1.1.0/MODULE.bazel\n@@ -0,0 +1 @@\n+module(name = \"m\", version = \"1.1.0\")\ndiff --git a/modules/m/metadata.json b/modules/m/metadata.json\nindex ba24d5e..bf81307 100644\n--- a/modules/m/metadata.json\n+++ b/modules/m/metadata.json\n@@ -1 +1 @@\n-{\"versions\": [\"1.0.0\"]}\n+{\"versions\": [\"1.0.0\", \"1.1.0\"]}\n",
+			"head": {
+				"modules/m/1.0.0/MODULE.bazel": "module(name = \"m\", version = \"1.0.0\")\n",
+				"modules/m/1.0.0/source.json": "{\"url\": \"https://example.invalid/m-1.0.0.tar.gz\", \"integrity\": \"sha256-AAAA\"}\n",
+				"modules/m/1.1.0/MODULE.bazel": "module(name = \"m\", version = \"1.1.0\")\n",
+				"modules/m/metadata.json": "{\"versions\": [\"1.0.0\", \"1.1.0\"]}\n"
 			}
 		}
 	]
