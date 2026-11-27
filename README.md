@@ -121,7 +121,9 @@ private archives through GitHub's authenticated API tarball endpoint and fail
 closed when `TINYLAND_REGISTRY_GITHUB_TOKEN` is absent. All three run only in
 the `trusted-private-consumers` job. The kit smoke moved there when
 `xoxd-ai/scheduling-kit` went private (TIN-8727). It builds the newest kit
-entry, `1.0.0.bcr.1`. The aggregate and Stage 1
+entry, `1.0.0.bcr.1`. The bridge smoke builds `0.8.0.bcr.1`, which pins kit
+`0.12.0.bcr.1` so the kit edge also resolves to an API tarball. The aggregate
+and Stage 1
 legacy-compatibility audits still run and report their failures, but they do not
 mask or block current package successors while immutable older private entries
 retain browser-archive URLs that GitHub App tokens cannot read.
