@@ -42,10 +42,12 @@ anything. When this file and those docs disagree, the docs win.
   `integrity`.
 - **Main moves only through reviewed PRs.** Never push to `main` directly.
   Never force-push. Commits are signed.
-- **No secrets in PRs.** Pull-request validation runs without credentials,
+- **No secrets in fork PRs.** The `validate` job runs without credentials,
   and fork PRs get only the read token. The private-consumer smokes run only
-  in the `trusted-private-consumers` job, on `main` push or dispatch. Never move
-  a secret into a `pull_request` path. Never print token values.
+  in the `trusted-private-consumers` job: on a `main` push or dispatch, and on
+  a pull request whose head branch lives in this repository (TIN-8910). That
+  job never runs for a fork or a Dependabot PR. Never move a secret into any
+  other `pull_request` path. Never print token values.
 - **Release publication needs an explicit operator go.** This covers the
   `Public frontend release` dispatch with `publish=true` and any GitHub
   release publication.
