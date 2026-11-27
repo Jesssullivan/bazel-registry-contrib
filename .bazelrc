@@ -1,0 +1,54 @@
+# xoxd-ai/bazel-registry Bazel configuration (TIN-8469)
+#
+# GloriousFlywheel (GF) runs every check of this repository. A developer, a
+# Just recipe and GF's head work ask GF the same way: the targets in
+# BUILD.bazel, with --config=gf below. GF's head work runs the rows of
+# .github/lanes.json for every pushed head with --ignore_all_rc_files, so no
+# line here may change an action key: no --action_env, --test_env, Starlark
+# flag or other key-affecting flag on a global line. A value set here would
+# enter a developer's keys and never the cell's, and the two would never share
+# a result.
+
+# Bound every Bazel server a checkout starts (TIN-5770 R470).
+startup --max_idle_secs=120
+
+common --enable_bzlmod
+common --lockfile_mode=error
+
+build --keep_going
+test --test_output=errors
+test --test_summary=detailed
+
+# A developer's own Bazel on the organization's cell (--config=gf, TIN-8469),
+# the same lines as GloriousFlywheel's own .bazelrc. Once per eight hours,
+# then nothing else typed:
+#   gf-reapi-credhelper login https://gf.xoxd.ai
+#   just check
+# The helper finds the session login stored for the cell and asks the cell for
+# a token for this workspace's repository (its Git remote origin). The token
+# allows Execute, CAS reads and writes and ActionCache reads in the instance
+# pushes use, owner-260565200, while you may write the repository. The cell
+# alone writes ActionCache entries, after its own worker ran the action. The
+# exec properties are the ones a push's actions carry, so their keys match.
+# gf.xoxd.ai is one name for every asker: on the tailnet it is the cell's
+# Tailscale address, and inside honey the cluster DNS points it at the cell's
+# Service.
+build:gf --disk_cache=
+build:gf --remote_executor=grpcs://gf.xoxd.ai
+build:gf --remote_instance_name=owner-260565200
+build:gf --credential_helper=gf.xoxd.ai=gf-reapi-credhelper
+build:gf --remote_default_exec_properties=Arch=x86_64
+build:gf --remote_default_exec_properties=OSFamily=linux
+build:gf --remote_default_exec_properties=gf.platform=gloriousflywheel-rbe-linux-x86_64
+build:gf --spawn_strategy=remote
+build:gf --genrule_strategy=remote
+build:gf --noremote_local_fallback
+build:gf --remote_upload_local_results=false
+build:gf --remote_download_outputs=toplevel
+build:gf --experimental_remote_cache_ttl=3h
+build:gf --remote_timeout=900
+build:gf --jobs=64
+common:gf --lockfile_mode=error
+test:gf --test_env=PATH=/usr/local/bin:/usr/bin:/bin
+
+try-import %workspace%/user.bazelrc

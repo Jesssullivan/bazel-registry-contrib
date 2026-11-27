@@ -31,12 +31,10 @@ at its root, pinned to the current estate-wide value: **9.2.0**.
   per-repo drift. Each repo bump references the Linear issue that authorized
   the estate-wide move (8.2.1: TIN-3857. 9.2.0: TIN-5447, R804).
 
-**This registry's own `.bazelversion` is inert for direct Bazel invocation.**
-This repo has no `MODULE.bazel`, `WORKSPACE`, `BUILD`, or `.bazelrc` — it is
-not a Bazel workspace itself, so `bazelisk` run at this repo's root does not
-locate a workspace and will not read this file (falling through to whatever
-version it resolves on its own). `.bazelversion` here is consumed exactly
-two ways, both by copy:
+**This registry's own `.bazelversion` also runs its checks.** The root
+`MODULE.bazel`, `BUILD.bazel` and `.bazelrc` hold only the registry's own
+checks, which GloriousFlywheel runs (TIN-8469). Consumers never read them.
+`.bazelversion` here is also consumed two ways by copy:
 
 1. `scripts/smoke-active-registry.mjs` and
    `scripts/smoke-stage1-consumer-targets.mjs` each copy this file verbatim
@@ -128,8 +126,8 @@ offline gate, not an oversight.
 This registry repo has no `just scaffold-doctor` recipe of its own (it is not
 a site.scaffold spoke); its own gate is `npm run validate` — which
 cross-checks `.bazelversion` against `package.json`'s `bazelEstate.version` —
-plus the immutability gate (`scripts/check-immutable-versions.sh`,
-`.github/workflows/immutability-gate.yml`).
+plus the immutability gate (`scripts/check-immutable-history.mjs`, the
+`immutability-gate` row of `.github/lanes.json`).
 
 ## Step B (Bazel 9.x migration)
 

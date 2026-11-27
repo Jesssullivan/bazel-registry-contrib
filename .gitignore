@@ -1,0 +1,6 @@
+# Bazel output links
+/bazel-*
+user.bazelrc
+
+# GF head work writes the authenticated history window here; never tracked.
+/gf_history_inputs/
