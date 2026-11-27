@@ -23,8 +23,10 @@ jobs:
   # pull request whose head branch lives in this repository. Its author already
   # has write access here. A fork PR never reaches this job, so it never sees
   # the App secrets. Dependabot PRs get no Actions secrets, so they skip it too.
-  # It runs on same-repository PRs since TIN-8910. It reports beside GF's checks
-  # and is not a required check in .github/rulesets/default-branch.json.
+  # It runs on same-repository PRs since TIN-8910. The I-24 fifteenth interview
+  # made it a required check. GF does not post it: this repository is public,
+  # and GF builds private source only for a private repository (TIN-8474
+  # 79e7cc54, D1).
   trusted-private-consumers:
     if: >-
       github.repository == 'xoxd-ai/bazel-registry' &&

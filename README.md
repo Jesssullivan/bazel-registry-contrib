@@ -132,7 +132,7 @@ closed when `TINYLAND_REGISTRY_GITHUB_TOKEN` is absent. All three run only in
 the `trusted-private-consumers` job. It runs on main and on a pull request
 whose head branch lives in this repository, never on a fork (TIN-8910). The kit smoke moved there when
 `xoxd-ai/scheduling-kit` went private (TIN-8727). It builds the newest kit
-entry, `1.0.0.bcr.1`. The bridge smoke builds `0.8.0.bcr.1`, which pins kit
+entry, `1.0.0.bcr.1`. The bridge smoke builds `0.9.0`, which pins kit
 `0.12.0.bcr.1` so the kit edge also resolves to an API tarball. The aggregate
 and Stage 1
 legacy-compatibility audits still run and report their failures, but they do not

@@ -41,6 +41,10 @@
 					{
 						"context": "immutability-gate",
 						"integration_id": 5100828
+					},
+					{
+						"context": "trusted-private-consumers",
+						"integration_id": 15368
 					}
 				]
 			}
