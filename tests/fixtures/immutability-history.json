@@ -1,0 +1,138 @@
+{
+	"$comment": "git log -p -U0 windows over a one-module fixture registry, recorded with git for scripts/test-check-immutable-history.mjs (TIN-8469). head is the modules/ tree after the window. The two merge cases were recorded with --parents and --diff-merges=first-parent, as GF records them; head_commit names their head.",
+	"cases": [
+		{
+			"name": "new version, edited within the window",
+			"expect": "pass",
+			"patch": "commit 52571df3e76b1560d84a295665065a44f1ad38eb\nAuthor: Fixture <fixture@example.invalid>\nDate:   Thu Nov 26 00:00:00 2026 +0000\n\n    fixture TIN-8469\n    \n\ndiff --git a/modules/m/1.1.0/MODULE.bazel b/modules/m/1.1.0/MODULE.bazel\nindex d645f09..1684bf1 100644\n--- a/modules/m/1.1.0/MODULE.bazel\n+++ b/modules/m/1.1.0/MODULE.bazel\n@@ -1,0 +2 @@ module(name = \"m\", version = \"1.1.0\")\n+# fix\n\ncommit 6d2c74bd813d7e4f7d3cb3e3a01fafbe9808735d\nAuthor: Fixture <fixture@example.invalid>\nDate:   Thu Nov 26 00:00:00 2026 +0000\n\n    fixture TIN-8469\n    \n\ndiff --git a/modules/m/1.1.0/MODULE.bazel b/modules/m/1.1.0/MODULE.bazel\nnew file mode 100644\nindex 0000000..d645f09\n--- /dev/null\n+++ b/modules/m/1.1.0/MODULE.bazel\n@@ -0,0 +1 @@\n+module(name = \"m\", version = \"1.1.0\")\ndiff --git a/modules/m/metadata.json b/modules/m/metadata.json\nindex ad6c862..d68f2bb 100644\n--- a/modules/m/metadata.json\n+++ b/modules/m/metadata.json\n@@ -1 +1 @@\n-{\"versions\": [\"1.0.0\"]}\n\\ No newline at end of file\n+{\"versions\": [\"1.0.0\", \"1.1.0\"]}\n\\ No newline at end of file\n",
+			"head": {
+				"modules/m/1.0.0/MODULE.bazel": "module(name = \"m\", version = \"1.0.0\")\n",
+				"modules/m/1.0.0/source.json": "{\n  \"url\": \"https://github.com/tinyland-inc/m/archive/refs/tags/v1.0.0.tar.gz\",\n  \"strip_prefix\": \"m-1.0.0\",\n  \"integrity\": \"sha256-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=\"\n}\n",
+				"modules/m/1.1.0/MODULE.bazel": "module(name = \"m\", version = \"1.1.0\")\n# fix\n",
+				"modules/m/metadata.json": "{\"versions\": [\"1.0.0\", \"1.1.0\"]}"
+			}
+		},
+		{
+			"name": "edit of a shipped file",
+			"expect": "fail",
+			"patch": "commit 21c1deba35c110b7da02dfcef1fa8aea2979e766\nAuthor: Fixture <fixture@example.invalid>\nDate:   Thu Nov 26 00:00:00 2026 +0000\n\n    fixture TIN-8469\n    \n\ndiff --git a/modules/m/1.0.0/MODULE.bazel b/modules/m/1.0.0/MODULE.bazel\nindex 863b4f6..7564617 100644\n--- a/modules/m/1.0.0/MODULE.bazel\n+++ b/modules/m/1.0.0/MODULE.bazel\n@@ -1,0 +2 @@ module(name = \"m\", version = \"1.0.0\")\n+# edit\n",
+			"head": {
+				"modules/m/1.0.0/MODULE.bazel": "module(name = \"m\", version = \"1.0.0\")\n# edit\n",
+				"modules/m/1.0.0/source.json": "{\n  \"url\": \"https://github.com/tinyland-inc/m/archive/refs/tags/v1.0.0.tar.gz\",\n  \"strip_prefix\": \"m-1.0.0\",\n  \"integrity\": \"sha256-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=\"\n}\n",
+				"modules/m/metadata.json": "{\"versions\": [\"1.0.0\"]}"
+			}
+		},
+		{
+			"name": "edit and revert",
+			"expect": "pass",
+			"patch": "commit 8c9f32a45b94b6507ebe9e2907fcdddb9fd1af99\nAuthor: Fixture <fixture@example.invalid>\nDate:   Thu Nov 26 00:00:00 2026 +0000\n\n    fixture TIN-8469\n    \n\ndiff --git a/modules/m/1.0.0/MODULE.bazel b/modules/m/1.0.0/MODULE.bazel\nindex 7564617..863b4f6 100644\n--- a/modules/m/1.0.0/MODULE.bazel\n+++ b/modules/m/1.0.0/MODULE.bazel\n@@ -2 +1,0 @@ module(name = \"m\", version = \"1.0.0\")\n-# edit\n\ncommit 6ac00eba6647cf0bd33af6f90fcf1a8820970c1e\nAuthor: Fixture <fixture@example.invalid>\nDate:   Thu Nov 26 00:00:00 2026 +0000\n\n    fixture TIN-8469\n    \n\ndiff --git a/modules/m/1.0.0/MODULE.bazel b/modules/m/1.0.0/MODULE.bazel\nindex 863b4f6..7564617 100644\n--- a/modules/m/1.0.0/MODULE.bazel\n+++ b/modules/m/1.0.0/MODULE.bazel\n@@ -1,0 +2 @@ module(name = \"m\", version = \"1.0.0\")\n+# edit\n",
+			"head": {
+				"modules/m/1.0.0/MODULE.bazel": "module(name = \"m\", version = \"1.0.0\")\n",
+				"modules/m/1.0.0/source.json": "{\n  \"url\": \"https://github.com/tinyland-inc/m/archive/refs/tags/v1.0.0.tar.gz\",\n  \"strip_prefix\": \"m-1.0.0\",\n  \"integrity\": \"sha256-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=\"\n}\n",
+				"modules/m/metadata.json": "{\"versions\": [\"1.0.0\"]}"
+			}
+		},
+		{
+			"name": "file added to a shipped version",
+			"expect": "fail",
+			"patch": "commit 03220df6c91a2060ee9426e9ac96e61389a4125d\nAuthor: Fixture <fixture@example.invalid>\nDate:   Thu Nov 26 00:00:00 2026 +0000\n\n    fixture TIN-8469\n    \n\ndiff --git a/modules/m/1.0.0/extra.patch b/modules/m/1.0.0/extra.patch\nnew file mode 100644\nindex 0000000..587be6b\n--- /dev/null\n+++ b/modules/m/1.0.0/extra.patch\n@@ -0,0 +1 @@\n+x\n",
+			"head": {
+				"modules/m/1.0.0/MODULE.bazel": "module(name = \"m\", version = \"1.0.0\")\n",
+				"modules/m/1.0.0/extra.patch": "x\n",
+				"modules/m/1.0.0/source.json": "{\n  \"url\": \"https://github.com/tinyland-inc/m/archive/refs/tags/v1.0.0.tar.gz\",\n  \"strip_prefix\": \"m-1.0.0\",\n  \"integrity\": \"sha256-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=\"\n}\n",
+				"modules/m/metadata.json": "{\"versions\": [\"1.0.0\"]}"
+			}
+		},
+		{
+			"name": "file deleted from a shipped version",
+			"expect": "fail",
+			"patch": "commit 6d25ee831f6c3b913e586c7d428a2c63e52cc125\nAuthor: Fixture <fixture@example.invalid>\nDate:   Thu Nov 26 00:00:00 2026 +0000\n\n    fixture TIN-8469\n    \n\ndiff --git a/modules/m/1.0.0/MODULE.bazel b/modules/m/1.0.0/MODULE.bazel\ndeleted file mode 100644\nindex 863b4f6..0000000\n--- a/modules/m/1.0.0/MODULE.bazel\n+++ /dev/null\n@@ -1 +0,0 @@\n-module(name = \"m\", version = \"1.0.0\")\n",
+			"head": {
+				"modules/m/1.0.0/source.json": "{\n  \"url\": \"https://github.com/tinyland-inc/m/archive/refs/tags/v1.0.0.tar.gz\",\n  \"strip_prefix\": \"m-1.0.0\",\n  \"integrity\": \"sha256-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=\"\n}\n",
+				"modules/m/metadata.json": "{\"versions\": [\"1.0.0\"]}"
+			}
+		},
+		{
+			"name": "recorded owner rename",
+			"expect": "rerecord",
+			"patch": "commit dd9e3b9c8ead5b26da81b820951ea04b2af288f4\nAuthor: Fixture <fixture@example.invalid>\nDate:   Thu Nov 26 00:00:00 2026 +0000\n\n    fixture TIN-8469\n    \n\ndiff --git a/modules/m/1.0.0/source.json b/modules/m/1.0.0/source.json\nindex dacb4a1..ac962ee 100644\n--- a/modules/m/1.0.0/source.json\n+++ b/modules/m/1.0.0/source.json\n@@ -2 +2 @@\n-  \"url\": \"https://github.com/tinyland-inc/m/archive/refs/tags/v1.0.0.tar.gz\",\n+  \"url\": \"https://github.com/xoxd-ai/m/archive/refs/tags/v1.0.0.tar.gz\",\n",
+			"head": {
+				"modules/m/1.0.0/MODULE.bazel": "module(name = \"m\", version = \"1.0.0\")\n",
+				"modules/m/1.0.0/source.json": "{\n  \"url\": \"https://github.com/xoxd-ai/m/archive/refs/tags/v1.0.0.tar.gz\",\n  \"strip_prefix\": \"m-1.0.0\",\n  \"integrity\": \"sha256-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=\"\n}\n",
+				"modules/m/metadata.json": "{\"versions\": [\"1.0.0\"]}"
+			}
+		},
+		{
+			"name": "integrity edit of a shipped source.json",
+			"expect": "fail",
+			"patch": "commit a41bb5a94d47af851877e7f6a118b5ee7774d532\nAuthor: Fixture <fixture@example.invalid>\nDate:   Thu Nov 26 00:00:00 2026 +0000\n\n    fixture TIN-8469\n    \n\ndiff --git a/modules/m/1.0.0/source.json b/modules/m/1.0.0/source.json\nindex dacb4a1..137f65a 100644\n--- a/modules/m/1.0.0/source.json\n+++ b/modules/m/1.0.0/source.json\n@@ -4 +4 @@\n-  \"integrity\": \"sha256-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=\"\n+  \"integrity\": \"sha256-CCCCBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=\"\n",
+			"head": {
+				"modules/m/1.0.0/MODULE.bazel": "module(name = \"m\", version = \"1.0.0\")\n",
+				"modules/m/1.0.0/source.json": "{\n  \"url\": \"https://github.com/tinyland-inc/m/archive/refs/tags/v1.0.0.tar.gz\",\n  \"strip_prefix\": \"m-1.0.0\",\n  \"integrity\": \"sha256-CCCCBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=\"\n}\n",
+				"modules/m/metadata.json": "{\"versions\": [\"1.0.0\"]}"
+			}
+		},
+		{
+			"name": "file renamed out of a shipped version",
+			"expect": "fail",
+			"patch": "commit 76c76087c722123125766a822cc6a5d84078a88a\nAuthor: Fixture <fixture@example.invalid>\nDate:   Thu Nov 26 00:00:00 2026 +0000\n\n    fixture TIN-8469\n    \n\ndiff --git a/modules/m/1.0.0/MODULE.bazel b/old/MODULE.bazel\nsimilarity index 100%\nrename from modules/m/1.0.0/MODULE.bazel\nrename to old/MODULE.bazel\n",
+			"head": {
+				"modules/m/1.0.0/source.json": "{\n  \"url\": \"https://github.com/tinyland-inc/m/archive/refs/tags/v1.0.0.tar.gz\",\n  \"strip_prefix\": \"m-1.0.0\",\n  \"integrity\": \"sha256-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=\"\n}\n",
+				"modules/m/metadata.json": "{\"versions\": [\"1.0.0\"]}"
+			}
+		},
+		{
+			"name": "metadata.json edit",
+			"expect": "pass",
+			"patch": "commit eebb38c4e0197bd4f2ccc330241e84fcdabf5546\nAuthor: Fixture <fixture@example.invalid>\nDate:   Thu Nov 26 00:00:00 2026 +0000\n\n    fixture TIN-8469\n    \n\ndiff --git a/modules/m/metadata.json b/modules/m/metadata.json\nindex ad6c862..5b3625c 100644\n--- a/modules/m/metadata.json\n+++ b/modules/m/metadata.json\n@@ -1 +1 @@\n-{\"versions\": [\"1.0.0\"]}\n\\ No newline at end of file\n+{\"versions\": [\"1.0.0\"], \"yanked_versions\": {}}\n\\ No newline at end of file\n",
+			"head": {
+				"modules/m/1.0.0/MODULE.bazel": "module(name = \"m\", version = \"1.0.0\")\n",
+				"modules/m/1.0.0/source.json": "{\n  \"url\": \"https://github.com/tinyland-inc/m/archive/refs/tags/v1.0.0.tar.gz\",\n  \"strip_prefix\": \"m-1.0.0\",\n  \"integrity\": \"sha256-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=\"\n}\n",
+				"modules/m/metadata.json": "{\"versions\": [\"1.0.0\"], \"yanked_versions\": {}}"
+			}
+		},
+		{
+			"name": "mode change in a shipped version",
+			"expect": "fail",
+			"patch": "commit b7c105b9a497a3cd41498a9673f9b8739012ea0d\nAuthor: Fixture <fixture@example.invalid>\nDate:   Thu Nov 26 00:00:00 2026 +0000\n\n    fixture TIN-8469\n    \n\ndiff --git a/modules/m/1.0.0/MODULE.bazel b/modules/m/1.0.0/MODULE.bazel\nold mode 100644\nnew mode 100755\n",
+			"head": {
+				"modules/m/1.0.0/MODULE.bazel": "module(name = \"m\", version = \"1.0.0\")\n",
+				"modules/m/1.0.0/source.json": "{\n  \"url\": \"https://github.com/tinyland-inc/m/archive/refs/tags/v1.0.0.tar.gz\",\n  \"strip_prefix\": \"m-1.0.0\",\n  \"integrity\": \"sha256-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=\"\n}\n",
+				"modules/m/metadata.json": "{\"versions\": [\"1.0.0\"]}"
+			}
+		},
+		{
+			"name": "shipped version deleted and re-added",
+			"expect": "fail",
+			"patch": "commit 0db02413961a58776f44a06ecc6cd218611d64b1\nAuthor: Fixture <fixture@example.invalid>\nDate:   Thu Nov 26 00:00:00 2026 +0000\n\n    fixture TIN-8469\n    \n\ndiff --git a/modules/m/1.0.0/MODULE.bazel b/modules/m/1.0.0/MODULE.bazel\nindex 863b4f6..4c0a99b 100644\n--- a/modules/m/1.0.0/MODULE.bazel\n+++ b/modules/m/1.0.0/MODULE.bazel\n@@ -1,0 +2 @@ module(name = \"m\", version = \"1.0.0\")\n+# replaced\ndiff --git a/modules/m/1.0.0/source.json b/modules/m/1.0.0/source.json\ndeleted file mode 100644\nindex dacb4a1..0000000\n--- a/modules/m/1.0.0/source.json\n+++ /dev/null\n@@ -1,5 +0,0 @@\n-{\n-  \"url\": \"https://github.com/tinyland-inc/m/archive/refs/tags/v1.0.0.tar.gz\",\n-  \"strip_prefix\": \"m-1.0.0\",\n-  \"integrity\": \"sha256-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=\"\n-}\n",
+			"head": {
+				"modules/m/1.0.0/MODULE.bazel": "module(name = \"m\", version = \"1.0.0\")\n# replaced\n",
+				"modules/m/metadata.json": "{\"versions\": [\"1.0.0\"]}"
+			}
+		},
+		{
+			"name": "merge that edits a shipped source.json",
+			"expect": "fail",
+			"head_commit": "191448a4af8c8958ffb90367be02e19e7f56dece",
+			"patch": "commit 191448a4af8c8958ffb90367be02e19e7f56dece bb9cda05bc4ee90c43b70c204425c0fa66d53b02 554fc17de40c6a6342225e3438cfe4704e79b354\nMerge: bb9cda0 554fc17\nAuthor: Fixture <fixture@example.invalid>\nDate:   Thu Nov 26 00:00:00 2026 +0000\n\n    Merge main TIN-8469\n\ndiff --git a/modules/m/1.0.0/source.json b/modules/m/1.0.0/source.json\nindex b54cbf7..72b1db4 100644\n--- a/modules/m/1.0.0/source.json\n+++ b/modules/m/1.0.0/source.json\n@@ -1 +1 @@\n-{\"url\": \"https://example.invalid/m-1.0.0.tar.gz\", \"integrity\": \"sha256-AAAA\"}\n+{\"url\": \"https://example.invalid/m-1.0.0.tar.gz\", \"integrity\": \"sha256-BBBB\"}\ndiff --git a/modules/m/1.1.0/MODULE.bazel b/modules/m/1.1.0/MODULE.bazel\nnew file mode 100644\nindex 0000000..d645f09\n--- /dev/null\n+++ b/modules/m/1.1.0/MODULE.bazel\n@@ -0,0 +1 @@\n+module(name = \"m\", version = \"1.1.0\")\ndiff --git a/modules/m/metadata.json b/modules/m/metadata.json\nindex ba24d5e..bf81307 100644\n--- a/modules/m/metadata.json\n+++ b/modules/m/metadata.json\n@@ -1 +1 @@\n-{\"versions\": [\"1.0.0\"]}\n+{\"versions\": [\"1.0.0\", \"1.1.0\"]}\n\ncommit bb9cda05bc4ee90c43b70c204425c0fa66d53b02 a421156d056dbf80be9058354b62c26ddb677635\nAuthor: Fixture <fixture@example.invalid>\nDate:   Thu Nov 26 00:00:00 2026 +0000\n\n    pr TIN-8469\n\ndiff --git a/NOTE b/NOTE\nnew file mode 100644\nindex 0000000..3316c86\n--- /dev/null\n+++ b/NOTE\n@@ -0,0 +1 @@\n+# pr note\n\ncommit 554fc17de40c6a6342225e3438cfe4704e79b354 a421156d056dbf80be9058354b62c26ddb677635\nAuthor: Fixture <fixture@example.invalid>\nDate:   Thu Nov 26 00:00:00 2026 +0000\n\n    main mints 1.1.0 TIN-8469\n\ndiff --git a/modules/m/1.1.0/MODULE.bazel b/modules/m/1.1.0/MODULE.bazel\nnew file mode 100644\nindex 0000000..d645f09\n--- /dev/null\n+++ b/modules/m/1.1.0/MODULE.bazel\n@@ -0,0 +1 @@\n+module(name = \"m\", version = \"1.1.0\")\ndiff --git a/modules/m/metadata.json b/modules/m/metadata.json\nindex ba24d5e..bf81307 100644\n--- a/modules/m/metadata.json\n+++ b/modules/m/metadata.json\n@@ -1 +1 @@\n-{\"versions\": [\"1.0.0\"]}\n+{\"versions\": [\"1.0.0\", \"1.1.0\"]}\n",
+			"head": {
+				"modules/m/1.0.0/MODULE.bazel": "module(name = \"m\", version = \"1.0.0\")\n",
+				"modules/m/1.0.0/source.json": "{\"url\": \"https://example.invalid/m-1.0.0.tar.gz\", \"integrity\": \"sha256-BBBB\"}\n",
+				"modules/m/1.1.0/MODULE.bazel": "module(name = \"m\", version = \"1.1.0\")\n",
+				"modules/m/metadata.json": "{\"versions\": [\"1.0.0\", \"1.1.0\"]}\n"
+			}
+		},
+		{
+			"name": "merge of main that mints a new version",
+			"expect": "pass",
+			"head_commit": "857bf55b3db367f8a55697b64744f32359cb4a43",
+			"patch": "commit 857bf55b3db367f8a55697b64744f32359cb4a43 bb9cda05bc4ee90c43b70c204425c0fa66d53b02 554fc17de40c6a6342225e3438cfe4704e79b354\nMerge: bb9cda0 554fc17\nAuthor: Fixture <fixture@example.invalid>\nDate:   Thu Nov 26 00:00:00 2026 +0000\n\n    Merge main TIN-8469\n\ndiff --git a/modules/m/1.1.0/MODULE.bazel b/modules/m/1.1.0/MODULE.bazel\nnew file mode 100644\nindex 0000000..d645f09\n--- /dev/null\n+++ b/modules/m/1.1.0/MODULE.bazel\n@@ -0,0 +1 @@\n+module(name = \"m\", version = \"1.1.0\")\ndiff --git a/modules/m/metadata.json b/modules/m/metadata.json\nindex ba24d5e..bf81307 100644\n--- a/modules/m/metadata.json\n+++ b/modules/m/metadata.json\n@@ -1 +1 @@\n-{\"versions\": [\"1.0.0\"]}\n+{\"versions\": [\"1.0.0\", \"1.1.0\"]}\n\ncommit bb9cda05bc4ee90c43b70c204425c0fa66d53b02 a421156d056dbf80be9058354b62c26ddb677635\nAuthor: Fixture <fixture@example.invalid>\nDate:   Thu Nov 26 00:00:00 2026 +0000\n\n    pr TIN-8469\n\ndiff --git a/NOTE b/NOTE\nnew file mode 100644\nindex 0000000..3316c86\n--- /dev/null\n+++ b/NOTE\n@@ -0,0 +1 @@\n+# pr note\n\ncommit 554fc17de40c6a6342225e3438cfe4704e79b354 a421156d056dbf80be9058354b62c26ddb677635\nAuthor: Fixture <fixture@example.invalid>\nDate:   Thu Nov 26 00:00:00 2026 +0000\n\n    main mints 1.1.0 TIN-8469\n\ndiff --git a/modules/m/1.1.0/MODULE.bazel b/modules/m/1.1.0/MODULE.bazel\nnew file mode 100644\nindex 0000000..d645f09\n--- /dev/null\n+++ b/modules/m/1.1.0/MODULE.bazel\n@@ -0,0 +1 @@\n+module(name = \"m\", version = \"1.1.0\")\ndiff --git a/modules/m/metadata.json b/modules/m/metadata.json\nindex ba24d5e..bf81307 100644\n--- a/modules/m/metadata.json\n+++ b/modules/m/metadata.json\n@@ -1 +1 @@\n-{\"versions\": [\"1.0.0\"]}\n+{\"versions\": [\"1.0.0\", \"1.1.0\"]}\n",
+			"head": {
+				"modules/m/1.0.0/MODULE.bazel": "module(name = \"m\", version = \"1.0.0\")\n",
+				"modules/m/1.0.0/source.json": "{\"url\": \"https://example.invalid/m-1.0.0.tar.gz\", \"integrity\": \"sha256-AAAA\"}\n",
+				"modules/m/1.1.0/MODULE.bazel": "module(name = \"m\", version = \"1.1.0\")\n",
+				"modules/m/metadata.json": "{\"versions\": [\"1.0.0\", \"1.1.0\"]}\n"
+			}
+		}
+	]
+}

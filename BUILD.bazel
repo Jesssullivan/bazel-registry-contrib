@@ -1,0 +1,94 @@
+"""Registry checks as finite Bazel tests (TIN-8469).
+
+GloriousFlywheel runs these for every pushed head through the rows of
+.github/lanes.json, and a developer runs the same targets with --config=gf
+(`just check`). Each test reads only its declared files, so its result is keyed
+by the registry content and nothing about the asker.
+"""
+
+load("@aspect_rules_js//js:defs.bzl", "js_test")
+
+REGISTRY_TREE = glob(["modules/**"]) + [
+    ".bazelversion",
+    "bazel_registry.json",
+    "package.json",
+]
+
+# Static registry contracts: sha256 SRI integrity, allowed source hosts, a
+# sibling metadata.json and MODULE.bazel per version, and .bazelversion
+# matching package.json bazelEstate.version.
+js_test(
+    name = "validate_registry_test",
+    data = REGISTRY_TREE,
+    entry_point = "scripts/validate-registry.mjs",
+    size = "small",
+)
+
+# Negative controls for the source-host allowlist in validate-registry.mjs.
+js_test(
+    name = "source_hosts_test",
+    data = [
+        ".bazelversion",
+        "scripts/validate-registry.mjs",
+    ],
+    entry_point = "scripts/test-validate-registry-source-hosts.mjs",
+    size = "small",
+)
+
+# The owner-rename allowance admits one shape and refuses its neighbours.
+js_test(
+    name = "owner_rename_record_test",
+    data = ["scripts/owner-rename-record.mjs"],
+    entry_point = "scripts/test-owner-rename-record.mjs",
+    size = "small",
+)
+
+# The token-free smoke pins in MODULE.bazel are each module's newest published
+# version and resolve from this checkout's registry tree.
+js_test(
+    name = "smoke_pins_test",
+    data = glob(["modules/*/metadata.json"]) + ["MODULE.bazel"],
+    entry_point = "scripts/check-smoke-pins.mjs",
+    size = "small",
+)
+
+# GF's head work writes the authenticated Git history of the pushed window
+# here before the action runs: `git log -p -U0` records, the base and head
+# commits and their count. The directory is never tracked.
+filegroup(
+    name = "gf_history_inputs",
+    srcs = glob(
+        ["gf_history_inputs/*"],
+        allow_empty = True,
+    ),
+)
+
+# Immutability gate: no change in the window may edit, add to or delete from a
+# modules/<name>/<version>/ directory that existed at the window's base,
+# except a source.json re-recorded under registry-owner-renames.json. It reads
+# the history only through //:gf_history_inputs, so it is manual: GF's
+# immutability-gate row supplies the window, and `just immutability-gate`
+# stages the same window from a local checkout.
+js_test(
+    name = "immutability_gate_test",
+    data = [
+        ":gf_history_inputs",
+        "registry-owner-renames.json",
+        "scripts/owner-rename-record.mjs",
+    ] + glob(["modules/**"]),
+    entry_point = "scripts/check-immutable-history.mjs",
+    size = "small",
+    tags = ["manual"],
+)
+
+# Self-test of the history reconstruction with fixture windows.
+js_test(
+    name = "immutability_gate_self_test",
+    data = [
+        "scripts/check-immutable-history.mjs",
+        "scripts/owner-rename-record.mjs",
+        "tests/fixtures/immutability-history.json",
+    ],
+    entry_point = "scripts/test-check-immutable-history.mjs",
+    size = "small",
+)

@@ -4,9 +4,9 @@ An [in-house Bazel module registry](https://bazel.build/external/registry) for
 Tinyland-authored Bzlmod modules (`tummycrypt_*`, `rules_tectonic`,
 `spear_resumes`, `dsa_study_packet`, ...). It is a static, content-addressed
 directory of `MODULE.bazel` + `source.json` + `metadata.json` triples under
-`modules/<name>/<version>/`, served to consumers over raw GitHub URLs — not a
-Bazel workspace itself (no `MODULE.bazel`, `WORKSPACE`, `BUILD`, or `.bazelrc`
-at this root; see "`.bazelversion` here" below).
+`modules/<name>/<version>/`, served to consumers over raw GitHub URLs. The root `MODULE.bazel`,
+`BUILD.bazel` and `.bazelrc` hold only this repo's own checks, which
+GloriousFlywheel runs (see "Validation" below). Consumers never read them.
 
 ## Estate Bazel version SSOT
 
@@ -18,10 +18,10 @@ convention, and full rationale are in
 [`docs/bazel-adoption-v0.md`](./docs/bazel-adoption-v0.md)), not a per-repo
 drift.
 
-### `.bazelversion` here is inert for direct invocation
+### `.bazelversion` here
 
-This repo is not a Bazel workspace, so running `bazelisk` at this root does
-not read this file. It is consumed exactly two ways, both by copy:
+Bazel at this root runs the registry checks under this version. It is also
+consumed two ways by copy:
 
 1. `npm run smoke:resolve` / `npm run smoke:stage1-consumer`
    (`scripts/smoke-active-registry.mjs`,
@@ -86,8 +86,17 @@ commit — see `docs/bazel-adoption-v0.md` §3 for the full convention.
   `registry.npmjs.org`, `npm.pkg.github.com`, and any other unlisted host are
   rejected. `npm run validate` alone can't prove the refusal path: this
   repo's real `modules/` tree has no disallowed-host entries to exercise it.
-- `scripts/check-immutable-versions.sh` — rejects edits to already-shipped
-  module version directories (immutability gate).
+- `scripts/check-immutable-history.mjs` (`//:immutability_gate_test`):
+  rejects edits to already-shipped module version directories (immutability
+  gate). It reads the pushed window's authenticated Git history, which GF's
+  head work stages into `gf_history_inputs/`; `just immutability-gate` stages
+  the same window locally.
+- GloriousFlywheel runs all of these as the `validate` and
+  `immutability-gate` rows of `.github/lanes.json`, for every pushed head.
+  The `validate` row also builds the token-free consumer surfaces below,
+  resolved from this checkout's own registry tree through the root
+  `MODULE.bazel` (`file://%workspace%`). A developer runs the same targets with
+  `just check` (TIN-8469).
 - `npm run smoke:resolve` / `npm run smoke:stage1-consumer` — network and
   GitHub-token dependent; exercise `.bazelversion` and this registry's module
   metadata through real `bazel mod graph` / `bazel build` runs in throwaway
@@ -107,13 +116,14 @@ commit — see `docs/bazel-adoption-v0.md` §3 for the full convention.
   — token-free consumers of public archives: `xoxd_public_chrome` +
   `xoxd_theme` (public-frontend release assets) and `rules_tectonic` (public
   tag archive, `//tectonic:all`). They never attach credentials, even if a token
-  is in the environment, so a green run proves the public path. Both run in the
-  pull-request `validate` job.
+  is in the environment, so a green run proves the public path. GF's
+  `validate` row builds the same targets for every pushed head, resolved from
+  the root `MODULE.bazel` pins (TIN-8469).
 
 - `npm run smoke:prompt-toon-only` is a token-free consumer of the public
   `prompt_toon` tag archive. It builds the data-only surface,
   `//:delegation_policy` and `//:skills`, and checks that the graph selects the
-  latest published version. It runs in the pull-request `validate` job.
+  latest published version. GF's `validate` row builds the same targets.
 
 The three isolated package smokes are required GF/self-hosted CI steps in
 `.github/workflows/validate.yml`. Kit, Bridge and Tempo consume commit-pinned

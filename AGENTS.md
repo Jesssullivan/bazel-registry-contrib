@@ -12,8 +12,10 @@ anything. When this file and those docs disagree, the docs win.
   `modules/<name>/<version>/{MODULE.bazel,source.json}`, a `metadata.json` per
   module, `bazel_registry.json`, release plans under `releases/` and checks
   under `scripts/`.
-- It is not a Bazel workspace. There is no root `MODULE.bazel`, `WORKSPACE`,
-  `BUILD` or `.bazelrc`.
+- The root `MODULE.bazel`, `BUILD.bazel` and `.bazelrc` hold only this
+  repo's checks, as Bazel tests that GloriousFlywheel runs (TIN-8469).
+  Consumers never read them: they read `bazel_registry.json` and `modules/`
+  at a pinned commit.
 - The root `.bazelversion` is the estate Bazel version SSOT. It must match
   `package.json` `bazelEstate.version`.
 - Consumers pin this registry to a 40-character commit SHA in their own
@@ -24,7 +26,8 @@ anything. When this file and those docs disagree, the docs win.
 
 - **Shipped versions are immutable.** Never edit a file under an existing
   `modules/<name>/<version>/`. Publish a new version directory instead.
-  `scripts/check-immutable-versions.sh` (the Immutability gate) enforces this.
+  `scripts/check-immutable-history.mjs` (the `immutability-gate` GF row)
+  enforces this.
 - **Owner renames are the only exception.** They must follow
   `registry-owner-renames.json`, using the shape that
   `scripts/owner-rename-record.mjs` enforces.
@@ -54,11 +57,18 @@ anything. When this file and those docs disagree, the docs win.
 
 ## Validation
 
-- Local (offline, diagnostic only): `npm run validate`,
-  `npm run test:validate-source-hosts` and `npm run test:owner-rename-record`.
-- The authority is the remote `Validate registry` and `Immutability gate`
-  workflows on the GloriousFlywheel `tinyland-nix` runners. Local runs do not
-  replace them as landing proof.
+- GloriousFlywheel runs the `validate` and `immutability-gate` rows of
+  `.github/lanes.json` for every pushed head and posts them as check runs of
+  the `gf-xoxd-ai` App. `.github/rulesets/default-branch.json` requires both.
+- A developer runs the same targets on GF: `gf-reapi-credhelper login
+  https://gf.xoxd.ai` once, then `just check` and `just immutability-gate`.
+  Both ask with `--config=gf`, so a result either asker got is stored for the
+  other.
+- A new version of `xoxd_public_chrome`, `xoxd_theme`, `rules_tectonic` or
+  `prompt_toon` bumps its pin in the root `MODULE.bazel` and refreshes
+  `MODULE.bazel.lock` in the same PR. `//:smoke_pins_test` fails otherwise.
+- The private-consumer smokes stay in the `trusted-private-consumers` Actions
+  job, because only Actions holds the registry-reader App key.
 
 ## Coordination
 

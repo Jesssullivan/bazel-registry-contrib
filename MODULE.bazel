@@ -1,0 +1,50 @@
+"""Checks for xoxd-ai/bazel-registry, run on GloriousFlywheel (TIN-8469).
+
+The registry itself is the static tree under modules/. This root module only
+holds the checks: a developer and GF's head work run the same targets with
+--config=gf (see .bazelrc and .github/lanes.json), so either asker gets the
+other's stored result. No consumer reads this file: consumers point --registry
+at a commit of this repository, and Bazel reads bazel_registry.json and
+modules/ from there.
+"""
+
+module(name = "xoxd_bazel_registry_checks")
+
+# Node runs the repository's existing scripts/*.mjs checks as finite tests on
+# a hermetic toolchain, never a node from the worker PATH. These are the
+# versions the public frontend modules below already select.
+bazel_dep(name = "aspect_rules_js", version = "2.9.1")
+bazel_dep(name = "rules_nodejs", version = "6.7.3")
+
+node = use_extension("@rules_nodejs//nodejs:extensions.bzl", "node")
+node.toolchain(node_version = "22.22.0")
+
+# Token-free consumer smokes. Each module resolves from this checkout's own
+# registry tree (file://%workspace%), exactly as a consumer pinned to this
+# commit resolves it, and the validate row builds its consumer surface.
+# //:smoke_pins_test fails when a pin is not the module's newest published
+# version, so a new version lands with its pin bump and MODULE.bazel.lock.
+bazel_dep(name = "xoxd_public_chrome", version = "0.1.0", dev_dependency = True)
+bazel_dep(name = "xoxd_theme", version = "0.1.1", dev_dependency = True)
+bazel_dep(name = "rules_tectonic", version = "0.2.3", dev_dependency = True)
+bazel_dep(name = "prompt_toon", version = "0.3.1", dev_dependency = True)
+
+single_version_override(
+    module_name = "xoxd_public_chrome",
+    registry = "file://%workspace%",
+)
+
+single_version_override(
+    module_name = "xoxd_theme",
+    registry = "file://%workspace%",
+)
+
+single_version_override(
+    module_name = "rules_tectonic",
+    registry = "file://%workspace%",
+)
+
+single_version_override(
+    module_name = "prompt_toon",
+    registry = "file://%workspace%",
+)
